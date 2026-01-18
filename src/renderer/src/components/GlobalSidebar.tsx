@@ -11,34 +11,47 @@ import {
 
 export const GlobalSidebar: React.FC = () => {
   const [expanded, setExpanded] = useState(false)
+  const [showToggle, setShowToggle] = useState(true)
   
-  useEffect(() => {
-    if (!(window as any).api) return
-    if (expanded) {
-      (window as any).api.windowResize(84, 300)
-    } else {
-      (window as any).api.windowResize(24, 300)
-    }
-  }, [expanded])
+  const handleExpand = () => {
+    // 1. 先隐藏三角
+    setShowToggle(false)
+    
+    // 2. 稍后扩大窗口
+    setTimeout(() => {
+      if ((window as any).api) {
+        (window as any).api.windowResize(84, 300)
+      }
+      // 3. 最后显示侧边栏内容
+      setTimeout(() => {
+        setExpanded(true)
+      }, 20)
+    }, 100)
+  }
+
+  const handleCollapse = () => {
+    // 1. 先隐藏侧边栏内容
+    setExpanded(false)
+    
+    // 2. 稍后缩小窗口
+    setTimeout(() => {
+      if ((window as any).api) {
+        (window as any).api.windowResize(24, 300)
+      }
+      // 3. 最后重新显示三角
+      setTimeout(() => {
+        setShowToggle(true)
+      }, 20)
+    }, 150)
+  }
 
   const openMain = () => {
     if (!(window as any).api) return
     (window as any).api.openWindow({ key: 'main', route: '/' })
   }
 
-  const openQuickPoint = () => {
-    // 统一使用 / 路径，因为主页即是积分操作页
-    openMain()
-  }
-
-  const openLeaderboard = () => {
-    if (!(window as any).api) return
-    (window as any).api.openWindow({ key: 'main', route: '/leaderboard' })
-  }
-
   return (
     <div 
-      className={`global-sidebar-container ${expanded ? 'expanded' : 'collapsed'}`}
       style={{
         height: '100vh',
         width: '84px',
@@ -46,70 +59,60 @@ export const GlobalSidebar: React.FC = () => {
         alignItems: 'center',
         justifyContent: 'flex-end',
         overflow: 'hidden',
-        background: 'transparent',
-        userSelect: 'none',
-        position: 'fixed',
-        right: 0,
-        top: 0
+        background: 'transparent'
       }}
     >
-      <div
+      {/* 日常展示的三角 */}
+      <div 
+        onClick={handleExpand}
+        className={`global-sidebar-toggle ${!showToggle ? 'hidden' : ''}`}
+        style={{ willChange: 'opacity, transform' }}
+      >
+        <ChevronLeftIcon />
+      </div>
+
+      {/* 侧边栏内容 */}
+      <div 
+        className={`sidebar-content-area ${expanded ? 'visible' : 'hidden'}`}
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
-          transform: expanded ? 'translateX(0)' : 'translateX(60px)',
+          backgroundColor: 'var(--ss-card-bg)',
+          height: 'fit-content',
+          willChange: 'opacity, transform'
         }}
       >
-        {/* 侧边栏内容区 */}
-        <div 
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            backgroundColor: 'var(--ss-card-bg)',
-            borderRadius: '12px 0 0 12px',
-            boxShadow: '-4px 0 16px rgba(0,0,0,0.15)',
-            border: '1px solid var(--ss-border-color)',
-            borderRight: 'none',
-            padding: '12px 8px',
-            gap: '12px',
-            width: '60px',
-            pointerEvents: expanded ? 'auto' : 'none',
-            flexShrink: 0
-          }}
+        {/* 顶部的关闭/收起按钮 */}
+        <Button 
+          shape="circle" 
+          variant="text" 
+          onClick={handleCollapse}
+          style={{ marginBottom: '8px', color: 'var(--td-brand-color)' }}
         >
-          <Tooltip content="主界面" placement="left">
-            <Button shape="circle" variant="text" onClick={openMain}>
-              <HomeIcon size="24px" />
-            </Button>
-          </Tooltip>
+          <ChevronRightIcon size="20px" />
+        </Button>
 
-          <Tooltip content="积分操作" placement="left">
-            <Button shape="circle" variant="text" onClick={openQuickPoint}>
-              <UserAddIcon size="24px" />
-            </Button>
-          </Tooltip>
+        <Tooltip content="主界面" placement="left">
+          <Button shape="circle" variant="text" onClick={openMain}>
+            <HomeIcon size="24px" />
+          </Button>
+        </Tooltip>
 
-          <Tooltip content="排行榜" placement="left">
-            <Button shape="circle" variant="text" onClick={openLeaderboard}>
-              <ViewListIcon size="24px" />
-            </Button>
-          </Tooltip>
+        <Tooltip content="积分操作" placement="left">
+          <Button shape="circle" variant="text" onClick={() => openMain()}>
+            <UserAddIcon size="24px" />
+          </Button>
+        </Tooltip>
 
-          <Tooltip content="设置" placement="left">
-            <Button shape="circle" variant="text" onClick={() => (window as any).api.openWindow({ key: 'main', route: '/settings' })}>
-              <SettingIcon size="24px" />
-            </Button>
-          </Tooltip>
-        </div>
+        <Tooltip content="排行榜" placement="left">
+          <Button shape="circle" variant="text" onClick={() => (window as any).api.openWindow({ key: 'main', route: '/leaderboard' })}>
+            <ViewListIcon size="24px" />
+          </Button>
+        </Tooltip>
 
-        {/* 展开/收起手柄 */}
-        <div 
-          onClick={() => setExpanded(!expanded)}
-          className="global-sidebar-toggle"
-        >
-          {expanded ? <ChevronRightIcon /> : <ChevronLeftIcon />}
-        </div>
+        <Tooltip content="设置" placement="left">
+          <Button shape="circle" variant="text" onClick={() => (window as any).api.openWindow({ key: 'main', route: '/settings' })}>
+            <SettingIcon size="24px" />
+          </Button>
+        </Tooltip>
       </div>
     </div>
   )
