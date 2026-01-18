@@ -210,7 +210,7 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
   const scrollToGroup = (key: string) => {
     const element = groupRefs.current[key]
     if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      element.scrollIntoView({ behavior: 'auto', block: 'start' })
     }
   }
 
@@ -398,12 +398,56 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
     ))
   }
 
+  // 快速导航滑动处理
+  const navContainerRef = useRef<HTMLDivElement>(null)
+  const isNavDragging = useRef(false)
+
+  const handleNavAction = useCallback((clientY: number) => {
+    if (!navContainerRef.current) return
+    const rect = navContainerRef.current.getBoundingClientRect()
+    const y = clientY - rect.top
+    const items = navContainerRef.current.children
+    const itemCount = items.length
+    if (itemCount === 0) return
+
+    // 计算当前指向第几个项
+    const itemHeight = rect.height / itemCount
+    const index = Math.floor(y / itemHeight)
+    const safeIndex = Math.max(0, Math.min(itemCount - 1, index))
+
+    const targetGroup = groupedStudents[safeIndex]
+    if (targetGroup) {
+      scrollToGroup(targetGroup.key)
+    }
+  }, [groupedStudents])
+
+  const onNavMouseDown = (e: React.MouseEvent) => {
+    isNavDragging.current = true
+    handleNavAction(e.clientY)
+    document.addEventListener('mousemove', onGlobalMouseMove)
+    document.addEventListener('mouseup', onGlobalMouseUp)
+  }
+
+  const onGlobalMouseMove = (e: MouseEvent) => {
+    if (isNavDragging.current) {
+      handleNavAction(e.clientY)
+    }
+  }
+
+  const onGlobalMouseUp = () => {
+    isNavDragging.current = false
+    document.removeEventListener('mousemove', onGlobalMouseMove)
+    document.removeEventListener('mouseup', onGlobalMouseUp)
+  }
+
   // 渲染快速导航
   const renderQuickNav = () => {
     if (groupedStudents.length <= 1 || sortType === 'score' || (sortType === 'alphabet' && searchKeyword)) return null
 
     return (
       <div
+        ref={navContainerRef}
+        onMouseDown={onNavMouseDown}
         style={{
           position: 'fixed',
           right: '12px',
@@ -411,21 +455,20 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
           transform: 'translateY(-50%)',
           display: 'flex',
           flexDirection: 'column',
-          gap: '2px',
           backgroundColor: 'var(--ss-card-bg)',
           padding: '8px 4px',
           borderRadius: '20px',
           boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
           zIndex: 100,
           maxHeight: '80vh',
-          overflowY: 'auto',
-          border: '1px solid var(--ss-border-color)'
+          border: '1px solid var(--ss-border-color)',
+          cursor: 'pointer',
+          userSelect: 'none'
         }}
       >
         {groupedStudents.map((group) => (
           <div
             key={group.key}
-            onClick={() => scrollToGroup(group.key)}
             style={{
               width: '24px',
               height: '24px',
@@ -435,12 +478,9 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
               fontSize: '11px',
               fontWeight: 'bold',
               color: 'var(--td-brand-color)',
-              cursor: 'pointer',
               borderRadius: '50%',
-              transition: 'background 0.2s'
+              pointerEvents: 'none' // 让事件由父容器统一处理
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--td-brand-color-1)')}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
           >
             {group.key}
           </div>
