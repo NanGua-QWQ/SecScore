@@ -14,6 +14,7 @@ import { AuthService } from './services/AuthService'
 import { DataService } from './services/DataService'
 import { ThemeService } from './services/ThemeService'
 import { WindowManager, type windowManagerOptions } from './services/WindowManager'
+import { TrayService } from './services/TrayService'
 import { StudentRepository } from './repos/StudentRepository'
 import { ReasonRepository } from './repos/ReasonRepository'
 import { EventRepository } from './repos/EventRepository'
@@ -31,7 +32,8 @@ import {
   SettingsStoreToken,
   StudentRepositoryToken,
   ThemeServiceToken,
-  WindowManagerToken
+  WindowManagerToken,
+  TrayServiceToken
 } from './hosting'
 
 type mainAppConfig = {
@@ -137,6 +139,10 @@ app.whenReady().then(async () => {
         WindowManagerToken,
         (p) => new WindowManager(p.get(MainContext), config.window)
       )
+      services.addSingleton(
+        TrayServiceToken,
+        (p) => new TrayService(p.get(MainContext), config.window)
+      )
     })
     .configure(async (_builderContext, appCtx) => {
       const services = appCtx.services
@@ -156,6 +162,8 @@ app.whenReady().then(async () => {
       services.get(SettlementRepositoryToken)
       services.get(ThemeServiceToken)
       services.get(WindowManagerToken)
+      const tray = services.get(TrayServiceToken) as TrayService
+      tray.initialize()
 
       const logLevelSetting = ctx.settings.getValue('log_level') as logLevel
       if (logLevelSetting) {
@@ -254,12 +262,14 @@ app.whenReady().then(async () => {
     })
 
   const host = await builder.build()
+  const ctx = host.services.get(MainContext) as MainContext
   await host.start()
 
   let disposing = false
   const beforeQuitHandler = () => {
     if (disposing) return
     disposing = true
+    ctx.isQuitting = true
     app.removeListener('before-quit', beforeQuitHandler)
     void host.dispose()
   }

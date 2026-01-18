@@ -76,6 +76,14 @@ export class WindowManager extends Service {
     win.webContents.setZoomFactor(zoom)
 
     this.windows.set(input.key, win)
+
+    win.on('close', (event) => {
+      if (!this.mainCtx.isQuitting && input.key === 'main') {
+        event.preventDefault()
+        win.hide()
+      }
+    })
+
     win.on('closed', () => {
       this.windows.delete(input.key)
     })

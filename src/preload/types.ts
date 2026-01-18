@@ -20,6 +20,7 @@ export interface themeConfig {
 export type settingsSpec = {
   is_wizard_completed: boolean
   log_level: logLevel
+  window_zoom: number
 }
 
 export type settingsKey = keyof settingsSpec
