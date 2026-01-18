@@ -161,6 +161,7 @@ app.whenReady().then(async () => {
       if (logLevelSetting) {
         ctx.logger.setLevel(logLevelSetting)
       }
+
       ctx.logger.info('Application starting...')
 
       const mainConsole = console as any

@@ -86,7 +86,10 @@ export function ContentArea({
 
       <Content style={{ flex: 1, overflowY: 'auto' }}>
         <Routes>
-          <Route path="/" element={<Home canEdit={permission === 'admin' || permission === 'points'} />} />
+          <Route
+            path="/"
+            element={<Home canEdit={permission === 'admin' || permission === 'points'} />}
+          />
           <Route path="/students" element={<StudentManager canEdit={permission === 'admin'} />} />
           <Route
             path="/score"

@@ -72,6 +72,9 @@ export class WindowManager extends Service {
       ...input.options
     })
 
+    const zoom = Number(this.mainCtx.settings.getValue('window_zoom')) || 1.0
+    win.webContents.setZoomFactor(zoom)
+
     this.windows.set(input.key, win)
     win.on('closed', () => {
       this.windows.delete(input.key)
@@ -180,6 +183,13 @@ export class WindowManager extends Service {
     this.mainCtx.handle('window:isMaximized', (event) => {
       const win = BrowserWindow.fromWebContents(event.sender)
       return win ? win.isMaximized() : false
+    })
+
+    this.mainCtx.handle('window:set-zoom', (event, zoom: number) => {
+      const win = BrowserWindow.fromWebContents(event.sender)
+      if (win && zoom >= 0.5 && zoom <= 2.0) {
+        win.webContents.setZoomFactor(zoom)
+      }
     })
 
     this.mainCtx.handle('window:toggle-devtools', (event) => {
