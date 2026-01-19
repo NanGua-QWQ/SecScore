@@ -98,6 +98,8 @@ export class WindowManager extends Service {
       show: false,
       autoHideMenuBar: true,
       frame: false,
+      transparent: true,
+      backgroundColor: '#00000000',
       icon: this.opts.icon,
       title: input.title,
       webPreferences: {
@@ -159,6 +161,18 @@ export class WindowManager extends Service {
     })
     win.on('unmaximize', () => {
       win.webContents.send('window:maximized-changed', false)
+    })
+
+    win.on('blur', () => {
+      if (input.key === 'global-sidebar' || input.key === 'main') {
+        this.applyMicaEffect(win)
+      }
+    })
+
+    win.on('focus', () => {
+      if (input.key === 'global-sidebar' || input.key === 'main') {
+        this.applyMicaEffect(win)
+      }
     })
 
     win.webContents.setWindowOpenHandler((details) => {
@@ -226,7 +240,10 @@ export class WindowManager extends Service {
     }
   }
 
-  public setMicaEffect(win: BrowserWindow, effect: 'mica' | 'tabbed' | 'acrylic' | 'blur' | 'transparent' | 'none' = 'mica') {
+  public setMicaEffect(
+    win: BrowserWindow,
+    effect: 'mica' | 'tabbed' | 'acrylic' | 'blur' | 'transparent' | 'none' = 'mica'
+  ) {
     if (!micaElectron) return
     const micaWin = win as MicaWindow
 
