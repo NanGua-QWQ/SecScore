@@ -21,6 +21,9 @@ export type settingsSpec = {
   is_wizard_completed: boolean
   log_level: logLevel
   window_zoom: number
+  window_theme: 'auto' | 'dark' | 'light'
+  window_effect: 'mica' | 'tabbed' | 'acrylic' | 'blur' | 'transparent' | 'none'
+  window_radius: 'rounded' | 'small' | 'square'
 }
 
 export type settingsKey = keyof settingsSpec

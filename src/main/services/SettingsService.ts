@@ -59,7 +59,6 @@ export class SettingsService extends Service {
           wc.setZoomFactor(zoom)
         })
 
-        // 仅更新全局侧边栏窗口的位置（不调整大小，大小由 GlobalSidebar 组件管理）
         const sidebarWindow = BrowserWindow.getAllWindows().find((win) => {
           try {
             return win.webContents.getURL().includes('#global-sidebar')
@@ -81,6 +80,24 @@ export class SettingsService extends Service {
           })
         }
       }
+    },
+    window_theme: {
+      kind: 'string',
+      defaultValue: 'auto',
+      writePermission: 'admin',
+      validate: (v) => v === 'auto' || v === 'dark' || v === 'light'
+    },
+    window_effect: {
+      kind: 'string',
+      defaultValue: 'mica',
+      writePermission: 'admin',
+      validate: (v) => ['mica', 'tabbed', 'acrylic', 'blur', 'transparent', 'none'].includes(v as string)
+    },
+    window_radius: {
+      kind: 'string',
+      defaultValue: 'rounded',
+      writePermission: 'admin',
+      validate: (v) => v === 'rounded' || v === 'small' || v === 'square'
     }
   }
 
