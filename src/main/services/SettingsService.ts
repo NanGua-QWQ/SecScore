@@ -59,7 +59,7 @@ export class SettingsService extends Service {
           wc.setZoomFactor(zoom)
         })
 
-        // 更新全局侧边栏窗口的位置和大小
+        // 仅更新全局侧边栏窗口的位置（不调整大小，大小由 GlobalSidebar 组件管理）
         const sidebarWindow = BrowserWindow.getAllWindows().find((win) => {
           try {
             return win.webContents.getURL().includes('#global-sidebar')
@@ -71,16 +71,13 @@ export class SettingsService extends Service {
         if (sidebarWindow && !sidebarWindow.isDestroyed()) {
           const primaryDisplay = screen.getPrimaryDisplay()
           const { width, height } = primaryDisplay.workAreaSize
-          const baseWidth = 84
-          const baseHeight = 300
-          const winWidth = Math.round(baseWidth * zoom)
-          const winHeight = Math.round(baseHeight * zoom)
+          const bounds = sidebarWindow.getBounds()
 
           sidebarWindow.setBounds({
-            x: width - winWidth,
-            y: Math.floor(height / 2 - winHeight / 2),
-            width: winWidth,
-            height: winHeight
+            x: width - bounds.width,
+            y: Math.floor(height / 2 - bounds.height / 2),
+            width: bounds.width,
+            height: bounds.height
           })
         }
       }
