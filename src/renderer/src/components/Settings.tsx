@@ -60,6 +60,8 @@ export const Settings: React.FC<{ permission: permissionLevel }> = ({ permission
   const [settleLoading, setSettleLoading] = useState(false)
   const [settleDialogVisible, setSettleDialogVisible] = useState(false)
 
+  const [urlRegisterLoading, setUrlRegisterLoading] = useState(false)
+
   const canAdmin = permission === 'admin'
 
   const permissionTag = useMemo(() => {
@@ -532,6 +534,62 @@ export const Settings: React.FC<{ permission: permissionLevel }> = ({ permission
                 </Space>
               </Form.FormItem>
             </Form>
+          </Card>
+        </Tabs.TabPanel>
+
+        <Tabs.TabPanel value="url" label="URL 链接">
+          <Card style={{ backgroundColor: 'var(--ss-card-bg)', color: 'var(--ss-text-main)' }}>
+            <div style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>
+              URL 协议 (secscore://)
+            </div>
+            <Divider />
+            <div style={{ marginBottom: '12px', fontSize: '13px', color: 'var(--ss-text-secondary)' }}>
+              可以通过 URL 链接唤起 SecScore 并执行操作，例如：
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px',
+                fontSize: '12px',
+                fontFamily:
+                  'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", monospace'
+              }}
+            >
+              <div>secscore://settings</div>
+              <div>secscore://score</div>
+              <div>secscore://sidebar/toggle</div>
+            </div>
+            <Divider />
+            <Space>
+              <Button
+                theme="primary"
+                loading={urlRegisterLoading}
+                disabled={!canAdmin}
+                onClick={async () => {
+                  if (!(window as any).api) return
+                  setUrlRegisterLoading(true)
+                  const res = await (window as any).api.registerUrlProtocol()
+                  setUrlRegisterLoading(false)
+                  if (res && res.success) {
+                    MessagePlugin.success('URL 协议已注册')
+                  } else {
+                    MessagePlugin.error(res?.message || '注册失败')
+                  }
+                }}
+              >
+                注册 URL 协议
+              </Button>
+            </Space>
+            <div
+              style={{
+                marginTop: '8px',
+                fontSize: '12px',
+                color: 'var(--ss-text-secondary)'
+              }}
+            >
+              需要安装版 SecScore，开发模式下可能无效。
+            </div>
           </Card>
         </Tabs.TabPanel>
 

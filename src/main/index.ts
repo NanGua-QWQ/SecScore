@@ -46,8 +46,169 @@ type mainAppConfig = {
   window: windowManagerOptions
 }
 
+const PROTOCOL_SCHEME = 'secscore'
+
+let mainCtxRef: MainContext | null = null
+let pendingProtocolUrl: string | null = null
+
+const extractProtocolUrl = (argv: string[]): string | null => {
+  const prefix = `${PROTOCOL_SCHEME}://`
+  const lowerPrefix = prefix.toLowerCase()
+  for (const arg of argv) {
+    if (typeof arg !== 'string') continue
+    const v = arg.trim()
+    if (!v) continue
+    const lower = v.toLowerCase()
+    if (lower.startsWith(lowerPrefix)) return v
+  }
+  return null
+}
+
+const openMainRoute = (ctx: MainContext, route: string) => {
+  ctx.windows.open({
+    key: 'main',
+    title: 'SecScore',
+    route
+  })
+}
+
+const handleProtocolUrl = (rawUrl: string, ctx: MainContext) => {
+  if (!rawUrl) return
+  let s = rawUrl.trim()
+  if (!s) return
+  const prefix = `${PROTOCOL_SCHEME}://`
+  if (s.toLowerCase().startsWith(prefix)) {
+    s = s.slice(prefix.length)
+  }
+  s = s.replace(/^\/+/, '')
+  if (!s) {
+    openMainRoute(ctx, '/')
+    return
+  }
+  const parts = s.split('/')
+  const head = parts[0]?.toLowerCase() ?? ''
+  const tail = parts.slice(1)
+  if (!head) {
+    openMainRoute(ctx, '/')
+    return
+  }
+  if (head === 'home') {
+    openMainRoute(ctx, '/')
+    return
+  }
+  if (head === 'students') {
+    openMainRoute(ctx, '/students')
+    return
+  }
+  if (head === 'score') {
+    openMainRoute(ctx, '/score')
+    return
+  }
+  if (head === 'leaderboard') {
+    openMainRoute(ctx, '/leaderboard')
+    return
+  }
+  if (head === 'settlements') {
+    openMainRoute(ctx, '/settlements')
+    return
+  }
+  if (head === 'reasons') {
+    openMainRoute(ctx, '/reasons')
+    return
+  }
+  if (head === 'settings') {
+    openMainRoute(ctx, '/settings')
+    return
+  }
+  if (head === 'sidebar') {
+    const action = tail[0]?.toLowerCase() ?? 'toggle'
+    const sidebarWin = ctx.windows.get('global-sidebar')
+    if (action === 'show') {
+      if (sidebarWin) {
+        sidebarWin.show()
+        sidebarWin.focus()
+      } else {
+        ctx.windows.open({
+          key: 'global-sidebar',
+          title: 'SecScore Sidebar',
+          route: '/global-sidebar',
+          options: {
+            transparent: true,
+            alwaysOnTop: true,
+            hasShadow: false,
+            type: 'toolbar'
+          }
+        })
+      }
+      return
+    }
+    if (action === 'hide') {
+      if (sidebarWin) {
+        sidebarWin.hide()
+      }
+      return
+    }
+    if (action === 'toggle') {
+      if (sidebarWin) {
+        if (sidebarWin.isVisible()) {
+          sidebarWin.hide()
+        } else {
+          sidebarWin.show()
+          sidebarWin.focus()
+        }
+      } else {
+        ctx.windows.open({
+          key: 'global-sidebar',
+          title: 'SecScore Sidebar',
+          route: '/global-sidebar',
+          options: {
+            transparent: true,
+            alwaysOnTop: true,
+            hasShadow: false,
+            type: 'toolbar'
+          }
+        })
+      }
+      return
+    }
+  }
+}
+
+const hasSingleInstanceLock = app.requestSingleInstanceLock()
+
+if (!hasSingleInstanceLock) {
+  app.quit()
+} else {
+  const initialUrl = extractProtocolUrl(process.argv)
+  if (initialUrl) {
+    pendingProtocolUrl = initialUrl
+  }
+  app.on('second-instance', (event, argv) => {
+    event.preventDefault()
+    const url = extractProtocolUrl(argv)
+    if (!url) return
+    if (mainCtxRef) {
+      handleProtocolUrl(url, mainCtxRef)
+    } else {
+      pendingProtocolUrl = url
+    }
+  })
+  app.on('open-url', (event, url) => {
+    event.preventDefault()
+    if (mainCtxRef) {
+      handleProtocolUrl(url, mainCtxRef)
+    } else {
+      pendingProtocolUrl = url
+    }
+  })
+}
+
 app.whenReady().then(async () => {
   electronApp.setAppUserModelId('com.electron')
+
+  if (!is.dev) {
+    app.setAsDefaultProtocolClient(PROTOCOL_SCHEME)
+  }
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
@@ -181,7 +342,31 @@ app.whenReady().then(async () => {
 
   const host = await builder.build()
   const ctx = host.services.get(MainContext) as MainContext
+  mainCtxRef = ctx
+
+  ctx.handle('app:register-url-protocol', async () => {
+    if (is.dev) {
+      return { success: false, message: '仅在打包后的应用中可用' }
+    }
+    try {
+      const ok = app.setAsDefaultProtocolClient(PROTOCOL_SCHEME)
+      if (ok) {
+        return { success: true, data: { registered: true } }
+      }
+      return { success: false, data: { registered: false }, message: '系统未接受协议注册' }
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : typeof error === 'string' ? error : 'Unknown error'
+      return { success: false, message: `注册失败: ${message}` }
+    }
+  })
+
   await host.start()
+
+  if (pendingProtocolUrl) {
+    handleProtocolUrl(pendingProtocolUrl, ctx)
+    pendingProtocolUrl = null
+  }
 
   let disposing = false
   const beforeQuitHandler = () => {

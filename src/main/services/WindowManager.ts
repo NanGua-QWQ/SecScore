@@ -135,7 +135,8 @@ export class WindowManager extends Service {
       win.setResizable(false)
     }
 
-    const zoom = Number(this.mainCtx.settings.getValue('window_zoom')) || 1.0
+    const zoomSettings = this.mainCtx.settings
+    const zoom = zoomSettings ? Number(zoomSettings.getValue('window_zoom')) || 1.0 : 1.0
     win.webContents.setZoomFactor(zoom)
 
     this.windows.set(input.key, win)
@@ -186,9 +187,10 @@ export class WindowManager extends Service {
 
   private applyMicaEffect(win: BrowserWindow) {
     if (!micaElectron) return
+    const settings = this.mainCtx.settings
+    if (!settings) return
     const micaWin = win as MicaWindow
-
-    const theme = this.mainCtx.settings.getValue('window_theme')
+    const theme = settings.getValue('window_theme')
     switch (theme) {
       case 'dark':
         micaWin.setDarkTheme()
@@ -200,7 +202,7 @@ export class WindowManager extends Service {
         micaWin.setAutoTheme()
     }
 
-    const effect = this.mainCtx.settings.getValue('window_effect')
+    const effect = settings.getValue('window_effect')
     switch (effect) {
       case 'mica':
         micaWin.setMicaEffect()
@@ -227,7 +229,7 @@ export class WindowManager extends Service {
         break
     }
 
-    const radius = this.mainCtx.settings.getValue('window_radius')
+    const radius = settings.getValue('window_radius')
     switch (radius) {
       case 'small':
         micaWin.setSmallRoundedCorner()

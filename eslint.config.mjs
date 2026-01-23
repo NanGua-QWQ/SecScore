@@ -30,7 +30,8 @@ export default defineConfig(
       '@typescript-eslint/no-explicit-any': 'off',
       'react-refresh/only-export-components': 'off',
       'react-hooks/exhaustive-deps': 'warn',
-      'react-hooks/set-state-in-effect': 'off'
+      'react-hooks/set-state-in-effect': 'off',
+      '@typescript-eslint/no-require-imports': 'off'
     }
   },
   eslintConfigPrettier

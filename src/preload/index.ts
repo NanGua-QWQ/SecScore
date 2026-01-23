@@ -101,7 +101,9 @@ const api = {
   clearLogs: () => ipcRenderer.invoke('log:clear'),
   setLogLevel: (level: string) => ipcRenderer.invoke('log:setLevel', level),
   writeLog: (payload: { level: string; message: string; meta?: any }) =>
-    ipcRenderer.invoke('log:write', payload)
+    ipcRenderer.invoke('log:write', payload),
+
+  registerUrlProtocol: () => ipcRenderer.invoke('app:register-url-protocol')
 }
 
 if (process.contextIsolated) {

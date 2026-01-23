@@ -150,4 +150,6 @@ export interface electronApi {
     message: string
     meta?: any
   }) => Promise<ipcResponse<void>>
+
+  registerUrlProtocol: () => Promise<ipcResponse<{ registered?: boolean }>>
 }
