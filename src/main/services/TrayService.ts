@@ -28,32 +28,6 @@ export class TrayService extends Service {
           this.showMainWindow()
         }
       },
-      {
-        label: '显隐悬浮侧边栏',
-        click: () => {
-          const sidebarWin = this.mainCtx.windows.get('global-sidebar')
-          if (sidebarWin) {
-            if (sidebarWin.isVisible()) {
-              sidebarWin.hide()
-            } else {
-              sidebarWin.show()
-              sidebarWin.focus()
-            }
-          } else {
-            this.mainCtx.windows.open({
-              key: 'global-sidebar',
-              title: 'SecScore Sidebar',
-              route: '/global-sidebar',
-              options: {
-                transparent: true,
-                alwaysOnTop: true,
-                hasShadow: false,
-                type: 'toolbar'
-              }
-            })
-          }
-        }
-      },
       { type: 'separator' },
       {
         label: '关闭应用',

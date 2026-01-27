@@ -87,7 +87,6 @@ const handleProtocolUrl = (rawUrl: string, ctx: MainContext) => {
   }
   const parts = s.split('/')
   const head = parts[0]?.toLowerCase() ?? ''
-  const tail = parts.slice(1)
   if (!head) {
     openMainRoute(ctx, '/')
     return
@@ -119,58 +118,6 @@ const handleProtocolUrl = (rawUrl: string, ctx: MainContext) => {
   if (head === 'settings') {
     openMainRoute(ctx, '/settings')
     return
-  }
-  if (head === 'sidebar') {
-    const action = tail[0]?.toLowerCase() ?? 'toggle'
-    const sidebarWin = ctx.windows.get('global-sidebar')
-    if (action === 'show') {
-      if (sidebarWin) {
-        sidebarWin.show()
-        sidebarWin.focus()
-      } else {
-        ctx.windows.open({
-          key: 'global-sidebar',
-          title: 'SecScore Sidebar',
-          route: '/global-sidebar',
-          options: {
-            transparent: true,
-            alwaysOnTop: true,
-            hasShadow: false,
-            type: 'toolbar'
-          }
-        })
-      }
-      return
-    }
-    if (action === 'hide') {
-      if (sidebarWin) {
-        sidebarWin.hide()
-      }
-      return
-    }
-    if (action === 'toggle') {
-      if (sidebarWin) {
-        if (sidebarWin.isVisible()) {
-          sidebarWin.hide()
-        } else {
-          sidebarWin.show()
-          sidebarWin.focus()
-        }
-      } else {
-        ctx.windows.open({
-          key: 'global-sidebar',
-          title: 'SecScore Sidebar',
-          route: '/global-sidebar',
-          options: {
-            transparent: true,
-            alwaysOnTop: true,
-            hasShadow: false,
-            type: 'toolbar'
-          }
-        })
-      }
-      return
-    }
   }
 }
 
@@ -307,7 +254,6 @@ app.whenReady().then(async () => {
     })
     .configure(async (_builderContext, appCtx) => {
       const services = appCtx.services
-      const ctx = services.get(MainContext)
       services.get(LoggerToken)
       const db = services.get(DbManagerToken) as DbManager
       await db.initialize()
@@ -325,19 +271,6 @@ app.whenReady().then(async () => {
       services.get(WindowManagerToken)
       const tray = services.get(TrayServiceToken) as TrayService
       tray.initialize()
-
-      // Open Global Sidebar on startup
-      ctx.windows.open({
-        key: 'global-sidebar',
-        title: 'SecScore Sidebar',
-        route: '/global-sidebar',
-        options: {
-          transparent: true,
-          alwaysOnTop: true,
-          hasShadow: false,
-          type: 'toolbar'
-        }
-      })
     })
 
   const host = await builder.build()
@@ -366,6 +299,8 @@ app.whenReady().then(async () => {
   if (pendingProtocolUrl) {
     handleProtocolUrl(pendingProtocolUrl, ctx)
     pendingProtocolUrl = null
+  } else {
+    openMainRoute(ctx, '/')
   }
 
   let disposing = false

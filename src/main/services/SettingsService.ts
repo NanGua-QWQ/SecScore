@@ -1,6 +1,6 @@
 import { Service } from '../../shared/kernel'
 import { MainContext } from '../context'
-import { BrowserWindow, webContents, screen } from 'electron'
+import { BrowserWindow, webContents } from 'electron'
 import type { IpcMainInvokeEvent } from 'electron'
 import type { settingsKey, settingsSpec, settingChange } from '../../preload/types'
 import type { permissionLevel } from './PermissionService'
@@ -58,27 +58,6 @@ export class SettingsService extends Service {
         webContents.getAllWebContents().forEach((wc: any) => {
           wc.setZoomFactor(zoom)
         })
-
-        const sidebarWindow = BrowserWindow.getAllWindows().find((win) => {
-          try {
-            return win.webContents.getURL().includes('#global-sidebar')
-          } catch {
-            return false
-          }
-        })
-
-        if (sidebarWindow && !sidebarWindow.isDestroyed()) {
-          const primaryDisplay = screen.getPrimaryDisplay()
-          const { width, height } = primaryDisplay.workAreaSize
-          const bounds = sidebarWindow.getBounds()
-
-          sidebarWindow.setBounds({
-            x: width - bounds.width,
-            y: Math.floor(height / 2 - bounds.height / 2),
-            width: bounds.width,
-            height: bounds.height
-          })
-        }
       }
     },
     window_theme: {

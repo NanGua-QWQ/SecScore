@@ -1,6 +1,6 @@
 import { Service } from '../../shared/kernel'
 import { MainContext } from '../context'
-import { BrowserWindow, shell, screen } from 'electron'
+import { BrowserWindow, shell } from 'electron'
 import type { BrowserWindowConstructorOptions } from 'electron'
 
 let micaElectron: typeof import('mica-electron') | null = null
@@ -117,24 +117,6 @@ export class WindowManager extends Service {
       win = new BrowserWindow(baseOptions)
     }
 
-    // Special positioning for global sidebar
-    if (input.key === 'global-sidebar') {
-      const primaryDisplay = screen.getPrimaryDisplay()
-      const { width, height } = primaryDisplay.workAreaSize
-      const winWidth = 84
-      const winHeight = 300
-      win.setBounds({
-        x: width - winWidth,
-        y: Math.floor(height / 2 - winHeight / 2),
-        width: winWidth,
-        height: winHeight
-      })
-      win.setAlwaysOnTop(true, 'screen-saver')
-      win.setVisibleOnAllWorkspaces(true)
-      win.setSkipTaskbar(true)
-      win.setResizable(false)
-    }
-
     const zoomSettings = this.mainCtx.settings
     const zoom = zoomSettings ? Number(zoomSettings.getValue('window_zoom')) || 1.0 : 1.0
     win.webContents.setZoomFactor(zoom)
@@ -165,13 +147,13 @@ export class WindowManager extends Service {
     })
 
     win.on('blur', () => {
-      if (input.key === 'global-sidebar' || input.key === 'main') {
+      if (input.key === 'main') {
         this.applyMicaEffect(win)
       }
     })
 
     win.on('focus', () => {
-      if (input.key === 'global-sidebar' || input.key === 'main') {
+      if (input.key === 'main') {
         this.applyMicaEffect(win)
       }
     })

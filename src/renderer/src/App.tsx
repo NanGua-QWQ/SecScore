@@ -6,7 +6,6 @@ import { ContentArea } from './components/ContentArea'
 import { Wizard } from './components/Wizard'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { ThemeEditorProvider } from './contexts/ThemeEditorContext'
-import { GlobalSidebar } from './components/GlobalSidebar'
 import { ThemeEditor } from './components/ThemeEditor'
 
 function MainContent(): React.JSX.Element {
@@ -148,7 +147,6 @@ function App(): React.JSX.Element {
       <ThemeEditorProvider>
         <HashRouter>
           <Routes>
-            <Route path="/global-sidebar" element={<GlobalSidebar />} />
             <Route path="/*" element={<MainContent />} />
           </Routes>
         </HashRouter>

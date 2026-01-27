@@ -543,7 +543,13 @@ export const Settings: React.FC<{ permission: permissionLevel }> = ({ permission
               URL 协议 (secscore://)
             </div>
             <Divider />
-            <div style={{ marginBottom: '12px', fontSize: '13px', color: 'var(--ss-text-secondary)' }}>
+            <div
+              style={{
+                marginBottom: '12px',
+                fontSize: '13px',
+                color: 'var(--ss-text-secondary)'
+              }}
+            >
               可以通过 URL 链接唤起 SecScore 并执行操作，例如：
             </div>
             <div
