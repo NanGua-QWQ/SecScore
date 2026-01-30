@@ -6,7 +6,8 @@ out
 *.log*
 logs
 
-build
+build/*
+!build/entitlements.mac.plist
 db.sqlite
 *.local
 .env.local
