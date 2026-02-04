@@ -13,6 +13,8 @@ import {
   Switch,
   Popconfirm,
   Radio,
+  Select,
+  TooltipLite
 } from 'tdesign-react'
 
 interface AutoScoreRule {
@@ -36,6 +38,7 @@ interface AutoScoreRuleFormValues {
 
 export const AutoScoreManager: React.FC = () => {
   const [rules, setRules] = useState<AutoScoreRule[]>([])
+  const [students, setStudents] = useState<{ id: number; name: string }[]>([])
   const [loading, setLoading] = useState(false)
   const [form] = Form.useForm()
   const [editingRuleId, setEditingRuleId] = useState<number | null>(null)
@@ -58,11 +61,17 @@ export const AutoScoreManager: React.FC = () => {
         console.warn('Auth check failed', e)
       }
 
-      const res = await (window as any).api.invoke('auto-score:getRules', {})
-      if (res.success) {
-        setRules(res.data)
+      const [rulesRes, studentsRes] = await Promise.all([
+        (window as any).api.invoke('auto-score:getRules', {}),
+        (window as any).api.queryStudents({})
+      ])
+      if (rulesRes.success) {
+        setRules(rulesRes.data)
       } else {
-        MessagePlugin.error(res.message || '获取规则失败')
+        MessagePlugin.error(rulesRes.message || '获取规则失败')
+      }
+      if (studentsRes.success) {
+        setStudents(studentsRes.data)
       }
     } catch (error) {
       console.error('Failed to fetch auto score rules:', error)
@@ -77,29 +86,29 @@ export const AutoScoreManager: React.FC = () => {
   }, [])
 
   const handleSubmit = async () => {
-    if (!(window as any).api) return
-    
-    // 修复类型转换错误，使用更安全的方式获取表单值
-    const values = form.getFieldsValue(true) as unknown as AutoScoreRuleFormValues
-    
+    if (!(window as any).api) return;
+
+    const values = form.getFieldsValue(true) as unknown as AutoScoreRuleFormValues & { timeUnit: string };
+
     if (!values.name || values.intervalMinutes == null || values.scoreValue == null) {
-      MessagePlugin.warning('请填写完整信息')
-      return
+      MessagePlugin.warning('请填写完整信息');
+      return;
     }
 
-    // 解析学生姓名列表（以逗号分隔）
-    const studentNames = values.studentNames
-      ? values.studentNames.split(',').map(name => name.trim()).filter(name => name)
-      : []
+    // 根据单位转换间隔时间
+    const intervalMinutes = values.timeUnit === 'days' ? values.intervalMinutes * 1440 : values.intervalMinutes;
+
+    // 确保 studentNames 是数组类型
+    const studentNames = Array.isArray(values.studentNames) ? values.studentNames : [];
 
     const ruleData = {
-      enabled: true, // 默认启用新规则
+      enabled: true,
       name: values.name,
-      intervalMinutes: values.intervalMinutes,
+      intervalMinutes,
       studentNames,
       scoreValue: values.scoreValue,
-      reason: values.reason || `自动化加分 - ${values.name}`
-    }
+      reason: values.reason || `自动化加分 - ${values.name}`,
+    };
 
     // 权限检查：仅管理员可创建/更新规则
     try {
@@ -133,7 +142,8 @@ export const AutoScoreManager: React.FC = () => {
           intervalMinutes: undefined,
           studentNames: '',
           scoreValue: undefined,
-          reason: ''
+          reason: '',
+          timeUnit: 'minutes'
         })
         setEditingRuleId(null)
         fetchRules() // 刷新规则列表
@@ -240,7 +250,12 @@ export const AutoScoreManager: React.FC = () => {
       colKey: 'intervalMinutes',
       title: '间隔',
       width: 100,
-      cell: ({ row }) => `${row.intervalMinutes} 分钟`
+      cell: ({ row }) => {
+        const isDays = row.intervalMinutes >= 1440
+        const value = isDays ? row.intervalMinutes / 1440 : row.intervalMinutes
+        const unit = isDays ? '天' : '分钟'
+        return `${value} ${unit}`
+      }
     },
     {
       colKey: 'scoreValue',
@@ -260,7 +275,17 @@ export const AutoScoreManager: React.FC = () => {
         if (row.studentNames.length === 0) {
           return <span>所有学生</span>
         }
-        return <span title={row.studentNames.join(', ')}>{row.studentNames.length} 名学生</span>
+        const studentList = row.studentNames.join(',\n')
+        return (
+          <TooltipLite
+            content={studentList}
+            showArrow
+            placement="mouse"
+            theme="default"
+          >
+            {row.studentNames.length} 名学生
+          </TooltipLite>
+        )
       }
     },
     { colKey: 'reason', title: '理由', ellipsis: true },
@@ -336,7 +361,7 @@ export const AutoScoreManager: React.FC = () => {
                 >
                   <InputNumber min={1} placeholder="例如：1（每隔1分钟/天执行一次）" />
                 </Form.FormItem>
-                <Form.FormItem name="timeUnit" style={{ marginBottom: 0 }}>
+                <Form.FormItem name="timeUnit" initialData="minutes" style={{ marginBottom: 0 }}>
                   <Radio.Group variant="default-filled">
                     <Radio.Button value="days">天</Radio.Button>
                     <Radio.Button value="minutes">分钟</Radio.Button>
@@ -357,7 +382,12 @@ export const AutoScoreManager: React.FC = () => {
               label="适用学生"
               name="studentNames"
             >
-              <Input placeholder="留空表示所有学生，多个学生用逗号分隔" />
+            <Select
+              filterable
+              multiple
+              placeholder="请选择或搜索学生（留空表示所有学生）"
+              options={students.map((student) => ({ label: student.name, value: student.name }))}
+            />
             </Form.FormItem>
 
             <Form.FormItem
