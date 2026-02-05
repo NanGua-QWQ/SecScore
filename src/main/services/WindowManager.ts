@@ -93,8 +93,8 @@ export class WindowManager extends Service {
     }
 
     const baseOptions: BrowserWindowConstructorOptions = {
-      width: 900,
-      height: 670,
+      width: 1180,
+      height: 680,
       show: false,
       autoHideMenuBar: true,
       frame: false,
