@@ -18,6 +18,8 @@ interface student {
 export const StudentManager: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
   const [data, setData] = useState<student[]>([])
   const [loading, setLoading] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState<number>(50)
   const [visible, setVisible] = useState(false)
   const [importVisible, setImportVisible] = useState(false)
   const [xlsxVisible, setXlsxVisible] = useState(false)
@@ -338,14 +340,18 @@ export const StudentManager: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
       </div>
 
       <Table
-        data={data}
+        data={data.slice((currentPage - 1) * pageSize, currentPage * pageSize)}
         columns={columns}
         rowKey="id"
         loading={loading}
-        bordered
         hover
-        pagination={{ pageSize: 50, total: data.length, defaultCurrent: 1 }}
-        scroll={{ type: 'virtual', rowHeight: 48, threshold: 100 }}
+        pagination={{
+          current: currentPage,
+          pageSize,
+          total: data.length,
+          onChange: (pageInfo) => setCurrentPage(pageInfo.current),
+          onPageSizeChange: (size) => setPageSize(size),
+        }}
         style={{ backgroundColor: 'var(--ss-card-bg)', color: 'var(--ss-text-main)' }}
       />
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { MoveIcon } from 'tdesign-icons-react'
 import {
   Card,
   Form,
@@ -40,6 +41,8 @@ export const AutoScoreManager: React.FC = () => {
   const [rules, setRules] = useState<AutoScoreRule[]>([])
   const [students, setStudents] = useState<{ id: number; name: string }[]>([])
   const [loading, setLoading] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState<number>(50)
   const [form] = Form.useForm()
   const [editingRuleId, setEditingRuleId] = useState<number | null>(null)
 
@@ -233,6 +236,12 @@ export const AutoScoreManager: React.FC = () => {
   }
 
   const columns: PrimaryTableCol<AutoScoreRule>[] = [
+    { 
+      colKey: 'drag', 
+      title: '排序', 
+      cell: () => <MoveIcon />, 
+      width: 60 
+    },
     {
       colKey: 'enabled',
       title: '状态',
@@ -270,7 +279,7 @@ export const AutoScoreManager: React.FC = () => {
     {
       colKey: 'studentNames',
       title: '适用学生',
-      width: 150,
+      width: 130,
       cell: ({ row }) => {
         if (row.studentNames.length === 0) {
           return <span>所有学生</span>
@@ -288,11 +297,11 @@ export const AutoScoreManager: React.FC = () => {
         )
       }
     },
-    { colKey: 'reason', title: '理由', ellipsis: true },
+    { colKey: 'reason', title: '理由', width: 130, ellipsis: true },
     {
       colKey: 'lastExecuted',
       title: '最后执行',
-      width: 150,
+      width: 180,
       cell: ({ row }) => {
         if (!row.lastExecuted) return <span>未执行</span>
         try {
@@ -328,6 +337,8 @@ export const AutoScoreManager: React.FC = () => {
       )
     }
   ]
+
+  const onDragSort = (params: any) => setRules(params.newData);
 
   return (
     <div style={{ padding: '24px' }}>
@@ -417,16 +428,25 @@ export const AutoScoreManager: React.FC = () => {
 
       <Card style={{ backgroundColor: 'var(--ss-card-bg)' }}>
         <Table
-          data={rules}
+          data={rules.slice((currentPage - 1) * pageSize, currentPage * pageSize)}
           columns={columns}
           rowKey="id"
+          resizable
           loading={loading}
-          pagination={{ defaultPageSize: 10 }}
+          dragSort="row-handler"
+          onDragSort={onDragSort}
+          pagination={{
+            current: currentPage,
+            pageSize,
+            total: rules.length,
+            onChange: (pageInfo) => setCurrentPage(pageInfo.current),
+            onPageSizeChange: (size) => setPageSize(size),
+          }}
           style={{ color: 'var(--ss-text-main)' }}
         />
       </Card>
 
-      <div style={{ marginTop: '24px', padding: '16px', backgroundColor: 'var(--ss-card-bg)', borderRadius: '8px' }}>
+{/*       <div style={{ marginTop: '24px', padding: '16px', backgroundColor: 'var(--ss-card-bg)', borderRadius: '8px' }}>
         <h3 style={{ marginBottom: '12px', color: 'var(--ss-text-main)' }}>使用说明</h3>
         <ul style={{ color: 'var(--ss-text-secondary)', lineHeight: '1.6' }}>
           <li>自动化加分功能会按照设定的时间间隔自动为学生加分</li>
@@ -434,7 +454,7 @@ export const AutoScoreManager: React.FC = () => {
           <li>如果"适用学生"字段为空，则规则适用于所有学生</li>
           <li>可以随时启用/禁用规则，不会影响已保存的规则配置</li>
         </ul>
-      </div>
+      </div> */}
     </div>
   )
 }
