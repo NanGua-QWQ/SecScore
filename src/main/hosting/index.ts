@@ -15,7 +15,8 @@ export {
   ThemeServiceToken,
   WindowManagerToken,
   TrayServiceToken,
-  AutoScoreServiceToken
+  AutoScoreServiceToken,
+  HttpServerServiceToken
 } from './tokens'
 export type {
   appRuntimeContext,

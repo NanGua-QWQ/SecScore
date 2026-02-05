@@ -26,6 +26,7 @@
     "@electron-toolkit/utils": "^4.0.0",
     "better-sqlite3": "^12.6.0",
     "chokidar": "^5.0.0",
+    "express": "^5.2.1",
     "mica-electron": "^1.5.16",
     "pinyin-pro": "^3.27.0",
     "react-router-dom": "^6.28.0",

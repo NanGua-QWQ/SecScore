@@ -5,6 +5,7 @@ out
 .eslintcache
 *.log*
 logs
+docs
 
 build/*
 !build/entitlements.mac.plist

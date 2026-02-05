@@ -103,8 +103,14 @@ const api = {
   writeLog: (payload: { level: string; message: string; meta?: any }) =>
     ipcRenderer.invoke('log:write', payload),
 
-  registerUrlProtocol: () => ipcRenderer.invoke('app:register-url-protocol')
-  ,
+  registerUrlProtocol: () => ipcRenderer.invoke('app:register-url-protocol'),
+  
+  // HTTP Server
+  httpServerStart: (config?: { port?: number; host?: string; corsOrigin?: string }) =>
+    ipcRenderer.invoke('http:server:start', config),
+  httpServerStop: () => ipcRenderer.invoke('http:server:stop'),
+  httpServerStatus: () => ipcRenderer.invoke('http:server:status'),
+  
   // Generic invoke wrapper for backward compatibility with callers using `api.invoke`
   invoke: (channel: string, ...args: any[]) => ipcRenderer.invoke(channel, ...args)
 }
