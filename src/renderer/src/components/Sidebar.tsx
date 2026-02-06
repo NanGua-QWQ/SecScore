@@ -6,7 +6,7 @@ import {
   RootListIcon,
   ViewListIcon,
   HomeIcon,
-  MoneyIcon
+  ReplayIcon
 } from 'tdesign-icons-react'
 import appLogo from '../assets/logoHD.svg'
 
@@ -78,7 +78,7 @@ export function Sidebar({ activeMenu, permission, onMenuChange }: SidebarProps):
           </Menu.MenuItem>
           <Menu.MenuItem value="leaderboard" icon={<ViewListIcon />}>            排行榜
           </Menu.MenuItem>
-          <Menu.MenuItem value="auto-score" icon={<MoneyIcon />}>            自动加分
+          <Menu.MenuItem value="auto-score" icon={<ReplayIcon />}>            自动加分
           </Menu.MenuItem>
           <Menu.MenuItem value="settlements" icon={<HistoryIcon />}>            结算历史
           </Menu.MenuItem>

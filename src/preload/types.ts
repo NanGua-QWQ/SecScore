@@ -154,6 +154,20 @@ export interface electronApi {
   }) => Promise<ipcResponse<void>>
 
   registerUrlProtocol: () => Promise<ipcResponse<{ registered?: boolean }>>
+  
+  // HTTP Server
+  httpServerStart: (config?: { port?: number; host?: string; corsOrigin?: string }) => Promise<
+    ipcResponse<{ url: string; config: { port: number; host: string; corsOrigin?: string } }>
+  >
+  httpServerStop: () => Promise<ipcResponse<void>>
+  httpServerStatus: () => Promise<
+    ipcResponse<{
+      isRunning: boolean
+      config: { port: number; host: string; corsOrigin?: string }
+      url: string | null
+    }>
+  >
+  
   // Generic invoke wrapper (minimal compatibility API)
   invoke?: (channel: string, ...args: any[]) => Promise<any>
 }

@@ -35,8 +35,10 @@ import {
   ThemeServiceToken,
   WindowManagerToken,
   TrayServiceToken,
-  AutoScoreServiceToken
+  AutoScoreServiceToken,
+  HttpServerServiceToken
 } from './hosting'
+import { HttpServerService } from './services/HttpServerService'
 
 type mainAppConfig = {
   isDev: boolean
@@ -257,6 +259,10 @@ app.whenReady().then(async () => {
         AutoScoreServiceToken,
         (p) => new AutoScoreService(p.get(MainContext))
       )
+      services.addSingleton(
+        HttpServerServiceToken,
+        (p) => new HttpServerService(p.get(MainContext))
+      )
     })
     .configure(async (_builderContext, appCtx) => {
       const services = appCtx.services
@@ -279,6 +285,7 @@ app.whenReady().then(async () => {
       tray.initialize()
       const autoScore = services.get(AutoScoreServiceToken) as AutoScoreService
       autoScore.initialize?.()
+      services.get(HttpServerServiceToken)
     })
     .configure(async (_builderContext, appCtx) => {
       const services = appCtx.services
