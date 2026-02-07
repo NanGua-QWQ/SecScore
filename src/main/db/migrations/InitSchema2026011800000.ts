@@ -11,6 +11,7 @@ export class InitSchema2026011800000 implements MigrationInterface {
           "name" text NOT NULL,
           "score" integer NOT NULL DEFAULT (0),
           "extra_json" text,
+          "tags" text NOT NULL DEFAULT '[]',
           "created_at" text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
           "updated_at" text NOT NULL DEFAULT (CURRENT_TIMESTAMP)
         )

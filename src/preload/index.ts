@@ -28,6 +28,14 @@ const api = {
   importStudentsFromXlsx: (params: { names: string[] }) =>
     ipcRenderer.invoke('db:student:importFromXlsx', params),
 
+  // DB - Tags
+  tagsGetAll: () => ipcRenderer.invoke('tags:getAll'),
+  tagsGetByStudent: (studentId: number) => ipcRenderer.invoke('tags:getByStudent', studentId),
+  tagsCreate: (name: string) => ipcRenderer.invoke('tags:create', name),
+  tagsDelete: (id: number) => ipcRenderer.invoke('tags:delete', id),
+  tagsUpdateStudentTags: (studentId: number, tagIds: number[]) =>
+    ipcRenderer.invoke('tags:updateStudentTags', studentId, tagIds),
+
   // DB - Reason
   queryReasons: () => ipcRenderer.invoke('db:reason:query'),
   createReason: (data: any) => ipcRenderer.invoke('db:reason:create', data),
