@@ -13,6 +13,7 @@ import { PermissionService } from './services/PermissionService'
 import { AuthService } from './services/AuthService'
 import { DataService } from './services/DataService'
 import { ThemeService } from './services/ThemeService'
+import { HttpServerService } from './services/HttpServerService'
 import { WindowManager, type windowManagerOptions } from './services/WindowManager'
 import { TrayService } from './services/TrayService'
 import { AutoScoreService } from './services/AutoScoreService'
@@ -20,6 +21,7 @@ import { StudentRepository } from './repos/StudentRepository'
 import { ReasonRepository } from './repos/ReasonRepository'
 import { EventRepository } from './repos/EventRepository'
 import { SettlementRepository } from './repos/SettlementRepository'
+import { TagRepository } from './repos/TagRepository'
 import {
   AppConfigToken,
   createHostBuilder,
@@ -32,13 +34,13 @@ import {
   SettlementRepositoryToken,
   SettingsStoreToken,
   StudentRepositoryToken,
+  TagRepositoryToken,
   ThemeServiceToken,
   WindowManagerToken,
   TrayServiceToken,
   AutoScoreServiceToken,
   HttpServerServiceToken
 } from './hosting'
-import { HttpServerService } from './services/HttpServerService'
 
 type mainAppConfig = {
   isDev: boolean
@@ -230,7 +232,7 @@ app.whenReady().then(async () => {
         (p) => new PermissionService(p.get(MainContext))
       )
       services.addSingleton(AuthService, (p) => new AuthService(p.get(MainContext)))
-      services.addSingleton(DataService, (p) => new DataService(p.get(MainContext)))
+      services.addSingleton(DataService, (p) => new DataService(p.get(MainContext), p.get(TagRepositoryToken)))
 
       services.addSingleton(
         StudentRepositoryToken,
@@ -241,6 +243,10 @@ app.whenReady().then(async () => {
       services.addSingleton(
         SettlementRepositoryToken,
         (p) => new SettlementRepository(p.get(MainContext))
+      )
+      services.addSingleton(
+        TagRepositoryToken,
+        (p) => new TagRepository((p.get(DbManagerToken) as DbManager).dataSource)
       )
 
       services.addSingleton(

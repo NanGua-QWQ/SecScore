@@ -60,6 +60,13 @@ export interface electronApi {
   updateStudent: (id: number, data: any) => Promise<ipcResponse<void>>
   deleteStudent: (id: number) => Promise<ipcResponse<void>>
 
+  // DB - Tags
+  tagsGetAll: () => Promise<ipcResponse<{ id: number; name: string }[]>>
+  tagsGetByStudent: (studentId: number) => Promise<ipcResponse<{ id: number; name: string }[]>>
+  tagsCreate: (name: string) => Promise<ipcResponse<{ id: number; name: string }>>
+  tagsDelete: (id: number) => Promise<ipcResponse<void>>
+  tagsUpdateStudentTags: (studentId: number, tagIds: number[]) => Promise<ipcResponse<void>>
+
   // DB - Reason
   queryReasons: () => Promise<ipcResponse<any[]>>
   createReason: (data: any) => Promise<ipcResponse<number>>

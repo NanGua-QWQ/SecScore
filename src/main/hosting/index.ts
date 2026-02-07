@@ -12,6 +12,7 @@ export {
   ReasonRepositoryToken,
   EventRepositoryToken,
   SettlementRepositoryToken,
+  TagRepositoryToken,
   ThemeServiceToken,
   WindowManagerToken,
   TrayServiceToken,
