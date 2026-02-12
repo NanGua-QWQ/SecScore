@@ -175,9 +175,13 @@ export interface electronApi {
   }) => Promise<ipcResponse<void>>
 
   registerUrlProtocol: () => Promise<ipcResponse<{ registered?: boolean }>>
-  
+
   // HTTP Server
-  httpServerStart: (config?: { port?: number; host?: string; corsOrigin?: string }) => Promise<
+  httpServerStart: (config?: {
+    port?: number
+    host?: string
+    corsOrigin?: string
+  }) => Promise<
     ipcResponse<{ url: string; config: { port: number; host: string; corsOrigin?: string } }>
   >
   httpServerStop: () => Promise<ipcResponse<void>>
@@ -192,13 +196,30 @@ export interface electronApi {
   // File System
   fsGetConfigStructure: () => Promise<ipcResponse<ConfigFolderStructure>>
   fsReadJson: (relativePath: string, folder?: 'automatic' | 'sscript') => Promise<ipcResponse<any>>
-  fsWriteJson: (relativePath: string, data: any, folder?: 'automatic' | 'sscript') => Promise<ipcResponse<void>>
-  fsReadText: (relativePath: string, folder?: 'automatic' | 'sscript') => Promise<ipcResponse<string | null>>
-  fsWriteText: (content: string, relativePath: string, folder?: 'automatic' | 'sscript') => Promise<ipcResponse<void>>
-  fsDeleteFile: (relativePath: string, folder?: 'automatic' | 'sscript') => Promise<ipcResponse<void>>
+  fsWriteJson: (
+    relativePath: string,
+    data: any,
+    folder?: 'automatic' | 'sscript'
+  ) => Promise<ipcResponse<void>>
+  fsReadText: (
+    relativePath: string,
+    folder?: 'automatic' | 'sscript'
+  ) => Promise<ipcResponse<string | null>>
+  fsWriteText: (
+    content: string,
+    relativePath: string,
+    folder?: 'automatic' | 'sscript'
+  ) => Promise<ipcResponse<void>>
+  fsDeleteFile: (
+    relativePath: string,
+    folder?: 'automatic' | 'sscript'
+  ) => Promise<ipcResponse<void>>
   fsListFiles: (folder?: 'automatic' | 'sscript') => Promise<ipcResponse<ConfigFileInfo[]>>
-  fsFileExists: (relativePath: string, folder?: 'automatic' | 'sscript') => Promise<ipcResponse<boolean>>
-  
+  fsFileExists: (
+    relativePath: string,
+    folder?: 'automatic' | 'sscript'
+  ) => Promise<ipcResponse<boolean>>
+
   // Generic invoke wrapper (minimal compatibility API)
   invoke?: (channel: string, ...args: any[]) => Promise<any>
 }

@@ -52,7 +52,7 @@ export const AutoScoreManager: React.FC = () => {
 
   const fetchRules = async () => {
     if (!(window as any).api) return
-    
+
     setLoading(true)
     try {
       // 权限检查：确保当前为 admin
@@ -93,20 +93,23 @@ export const AutoScoreManager: React.FC = () => {
   }, [])
 
   const handleSubmit = async () => {
-    if (!(window as any).api) return;
+    if (!(window as any).api) return
 
-    const values = form.getFieldsValue(true) as unknown as AutoScoreRuleFormValues & { timeUnit: string };
+    const values = form.getFieldsValue(true) as unknown as AutoScoreRuleFormValues & {
+      timeUnit: string
+    }
 
     if (!values.name || values.intervalMinutes == null || values.scoreValue == null) {
-      MessagePlugin.warning('请填写完整信息');
-      return;
+      MessagePlugin.warning('请填写完整信息')
+      return
     }
 
     // 根据单位转换间隔时间
-    const intervalMinutes = values.timeUnit === 'days' ? values.intervalMinutes * 1440 : values.intervalMinutes;
+    const intervalMinutes =
+      values.timeUnit === 'days' ? values.intervalMinutes * 1440 : values.intervalMinutes
 
     // 确保 studentNames 是数组类型
-    const studentNames = Array.isArray(values.studentNames) ? values.studentNames : [];
+    const studentNames = Array.isArray(values.studentNames) ? values.studentNames : []
 
     const triggersPayload = triggerList.map((t) => ({ event: t.eventName, value: t.value }))
 
@@ -118,7 +121,7 @@ export const AutoScoreManager: React.FC = () => {
       scoreValue: values.scoreValue,
       reason: values.reason || `自动化加分 - ${values.name}`,
       triggers: triggersPayload
-    };
+    }
 
     // 权限检查：仅管理员可创建/更新自动化
     try {
@@ -168,7 +171,9 @@ export const AutoScoreManager: React.FC = () => {
         setTriggerList([])
         fetchRules() // 刷新自动化列表
       } else {
-        MessagePlugin.error(res.message || (editingRuleId !== null ? '更新自动化失败' : '创建自动化失败'))
+        MessagePlugin.error(
+          res.message || (editingRuleId !== null ? '更新自动化失败' : '创建自动化失败')
+        )
       }
     } catch (error) {
       console.error('Failed to submit auto score rule:', error)
@@ -268,11 +273,11 @@ export const AutoScoreManager: React.FC = () => {
   }
 
   const columns: PrimaryTableCol<AutoScoreRule>[] = [
-    { 
-      colKey: 'drag', 
-      title: '排序', 
-      cell: () => <MoveIcon />, 
-      width: 60 
+    {
+      colKey: 'drag',
+      title: '排序',
+      cell: () => <MoveIcon />,
+      width: 60
     },
     {
       colKey: 'enabled',
@@ -318,12 +323,7 @@ export const AutoScoreManager: React.FC = () => {
         }
         const studentList = row.studentNames.join(',\n')
         return (
-          <TooltipLite
-            content={studentList}
-            showArrow
-            placement="mouse"
-            theme="default"
-          >
+          <TooltipLite content={studentList} showArrow placement="mouse" theme="default">
             {row.studentNames.length} 名学生
           </TooltipLite>
         )
@@ -350,17 +350,10 @@ export const AutoScoreManager: React.FC = () => {
       width: 150,
       cell: ({ row }) => (
         <Space>
-          <Button
-            size="small"
-            variant="outline"
-            onClick={() => handleEdit(row)}
-          >
+          <Button size="small" variant="outline" onClick={() => handleEdit(row)}>
             编辑
           </Button>
-          <Popconfirm
-            content="确定要删除这条自动化吗？"
-            onConfirm={() => handleDelete(row.id)}
-          >
+          <Popconfirm content="确定要删除这条自动化吗？" onConfirm={() => handleDelete(row.id)}>
             <Button size="small" variant="outline" theme="danger">
               删除
             </Button>
@@ -369,31 +362,57 @@ export const AutoScoreManager: React.FC = () => {
       )
     }
   ]
-  const onDragSort = (params: any) => setRules(params.newData);
-  
+  const onDragSort = (params: any) => setRules(params.newData)
+
   type TriggerDef = {
     id: number
     label: string
     description: string
     eventName: string
-    valueType?: "DatePicker" | "Input"
+    valueType?: 'DatePicker' | 'Input'
   }
 
   const allTriggers: TriggerDef[] = [
-    { id: 1, label: '根据间隔时间触发', description: '当学生注册时触发自动化', eventName: 'interval_time_passed', valueType: 'DatePicker' },
-    { id: 2, label: '按照学生标签触发', description: '当学生完成作业时触发自动化', eventName: 'student_tag_matched', valueType: 'Input' },
-    { id: 3, label: '随机时间触发', description: '当随机时间到达时触发自动化', eventName: 'random_time_reached' }
+    {
+      id: 1,
+      label: '根据间隔时间触发',
+      description: '当学生注册时触发自动化',
+      eventName: 'interval_time_passed',
+      valueType: 'DatePicker'
+    },
+    {
+      id: 2,
+      label: '按照学生标签触发',
+      description: '当学生完成作业时触发自动化',
+      eventName: 'student_tag_matched',
+      valueType: 'Input'
+    },
+    {
+      id: 3,
+      label: '随机时间触发',
+      description: '当随机时间到达时触发自动化',
+      eventName: 'random_time_reached'
+    }
   ]
 
   const triggerOptions = allTriggers.map((t) => ({ label: t.label, value: t.eventName }))
 
   // triggerList items only need id, eventName, haveValue and value
-  type TriggerItem = { id: number; eventName: string; value?: string; valueType?: "DatePicker" | "Input" }
+  type TriggerItem = {
+    id: number
+    eventName: string
+    value?: string
+    valueType?: 'DatePicker' | 'Input'
+  }
   const [triggerList, setTriggerList] = useState<TriggerItem[]>([])
 
   const handleTriggerChange = (id: number, value: string) => {
     const found = allTriggers.find((a) => a.eventName === value)
-    setTriggerList((prev) => prev.map((t) => (t.id === id ? { ...t, eventName: value, valueType: found?.valueType, value: '' } : t)))
+    setTriggerList((prev) =>
+      prev.map((t) =>
+        t.id === id ? { ...t, eventName: value, valueType: found?.valueType, value: '' } : t
+      )
+    )
   }
 
   const handleValueChange = (id: number, val: string) => {
@@ -407,7 +426,15 @@ export const AutoScoreManager: React.FC = () => {
   const handleAddTrigger = () => {
     const nextId = triggerList.length ? Math.max(...triggerList.map((t) => t.id)) + 1 : 1
     const defaultTrigger = allTriggers[0]
-    setTriggerList((prev) => [...prev, { id: nextId, eventName: defaultTrigger.eventName, valueType: defaultTrigger.valueType, value: '' }])
+    setTriggerList((prev) => [
+      ...prev,
+      {
+        id: nextId,
+        eventName: defaultTrigger.eventName,
+        valueType: defaultTrigger.valueType,
+        value: ''
+      }
+    ])
   }
 
   const triggerItems = triggerList
@@ -440,24 +467,21 @@ export const AutoScoreManager: React.FC = () => {
               placeholder="请输入Value"
               style={{ width: '150px' }}
               value={String(triggerTest.value ?? '')}
-              onChange={(v) => handleValueChange(triggerTest.id, String((v as any).target?.value ?? v))}
+              onChange={(v) =>
+                handleValueChange(triggerTest.id, String((v as any).target?.value ?? v))
+              }
             />
           )
         ) : null}
       </div>
     ))
 
-
   return (
     <div style={{ padding: '24px' }}>
       <h2 style={{ marginBottom: '24px', color: 'var(--ss-text-main)' }}>自动化加分管理</h2>
 
       <Card style={{ marginBottom: '24px', backgroundColor: 'var(--ss-card-bg)' }}>
-        <Form
-          form={form}
-          labelWidth={100}
-          onReset={handleResetForm}
-        >
+        <Form form={form} labelWidth={100} onReset={handleResetForm}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
             <Form.FormItem
               label="自动化名称"
@@ -470,13 +494,13 @@ export const AutoScoreManager: React.FC = () => {
             <Form.FormItem>
               <Space>
                 <Form.FormItem
-                label="间隔时间"
-                name="intervalMinutes"
-                rules={[
-                  { required: true, message: '请输入间隔时间' },
-                  { min: 1, message: '间隔时间至少为1分钟/天' }
-                ]}
-                style={{ marginBottom: 0 }}
+                  label="间隔时间"
+                  name="intervalMinutes"
+                  rules={[
+                    { required: true, message: '请输入间隔时间' },
+                    { min: 1, message: '间隔时间至少为1分钟/天' }
+                  ]}
+                  style={{ marginBottom: 0 }}
                 >
                   <InputNumber min={1} placeholder="例如：1（每隔1分钟/天执行一次）" />
                 </Form.FormItem>
@@ -497,43 +521,31 @@ export const AutoScoreManager: React.FC = () => {
               <InputNumber placeholder="例如：1（每次加1分）" />
             </Form.FormItem>
 
-            <Form.FormItem
-              label="适用学生"
-              name="studentNames"
-            >
-            <Select
-              filterable
-              multiple
-              placeholder="请选择或搜索学生（留空表示所有学生）"
-              options={students.map((student) => ({ label: student.name, value: student.name }))}
-            />
+            <Form.FormItem label="适用学生" name="studentNames">
+              <Select
+                filterable
+                multiple
+                placeholder="请选择或搜索学生（留空表示所有学生）"
+                options={students.map((student) => ({ label: student.name, value: student.name }))}
+              />
             </Form.FormItem>
 
-            <Form.FormItem
-              label="加分理由"
-              name="reason"
-            >
+            <Form.FormItem label="加分理由" name="reason">
               <Input placeholder="例如：每日签到奖励" />
             </Form.FormItem>
           </div>
 
           <div style={{ marginTop: '24px', display: 'flex', gap: '12px' }}>
-            <Button
-              theme="primary"
-              onClick={handleSubmit}
-            >
+            <Button theme="primary" onClick={handleSubmit}>
               {editingRuleId !== null ? '更新自动化' : '添加自动化'}
             </Button>
-            <Button
-              type="reset"
-              variant="outline"
-            >
+            <Button type="reset" variant="outline">
               {editingRuleId !== null ? '取消编辑' : '重置表单'}
             </Button>
           </div>
         </Form>
       </Card>
-      <Card style={{ marginBottom: '24px',backgroundColor: 'var(--ss-card-bg)' }}>
+      <Card style={{ marginBottom: '24px', backgroundColor: 'var(--ss-card-bg)' }}>
         <Table
           data={rules.slice((currentPage - 1) * pageSize, currentPage * pageSize)}
           columns={columns}
@@ -547,32 +559,37 @@ export const AutoScoreManager: React.FC = () => {
             pageSize,
             total: rules.length,
             onChange: (pageInfo) => setCurrentPage(pageInfo.current),
-            onPageSizeChange: (size) => setPageSize(size),
+            onPageSizeChange: (size) => setPageSize(size)
           }}
           style={{ color: 'var(--ss-text-main)' }}
         />
       </Card>
 
-      <Card style={{ marginBottom: '24px', backgroundColor: 'var(--ss-card-bg)' }} title="当以下事件触发时" headerBordered>
-        <Space style={{ display: "grid" }}>
+      <Card
+        style={{ marginBottom: '24px', backgroundColor: 'var(--ss-card-bg)' }}
+        title="当以下事件触发时"
+        headerBordered
+      >
+        <Space style={{ display: 'grid' }}>
           {triggerItems}
-          <Button 
-            theme="default" 
-            variant="text" 
-            style={{ fontWeight: 'bolder', fontSize: 15 }} 
-            icon={<AddIcon strokeWidth={3}/>} 
-            onClick={handleAddTrigger}>
+          <Button
+            theme="default"
+            variant="text"
+            style={{ fontWeight: 'bolder', fontSize: 15 }}
+            icon={<AddIcon strokeWidth={3} />}
+            onClick={handleAddTrigger}
+          >
             添加触发器
           </Button>
         </Space>
       </Card>
 
-      <Card style={{ marginBottom: '24px' , backgroundColor: 'var(--ss-card-bg)' }}>
+      <Card style={{ marginBottom: '24px', backgroundColor: 'var(--ss-card-bg)' }}>
         <SyntaxHighlighter language="javascript" style={prism} showLineNumbers>
           println("这是一个示例代码块，展示如何使用自动化加分功能的API接口")
         </SyntaxHighlighter>
       </Card>
-{/*       <div style={{ marginTop: '24px', padding: '16px', backgroundColor: 'var(--ss-card-bg)', borderRadius: '8px' }}>
+      {/*       <div style={{ marginTop: '24px', padding: '16px', backgroundColor: 'var(--ss-card-bg)', borderRadius: '8px' }}>
         <h3 style={{ marginBottom: '12px', color: 'var(--ss-text-main)' }}>使用说明</h3>
         <ul style={{ color: 'var(--ss-text-secondary)', lineHeight: '1.6' }}>
           <li>自动化加分功能会按照设定的时间间隔自动为学生加分</li>

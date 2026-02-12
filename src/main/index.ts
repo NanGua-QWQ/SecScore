@@ -237,7 +237,10 @@ app.whenReady().then(async () => {
         (p) => new PermissionService(p.get(MainContext))
       )
       services.addSingleton(AuthService, (p) => new AuthService(p.get(MainContext)))
-      services.addSingleton(DataService, (p) => new DataService(p.get(MainContext), p.get(TagRepositoryToken)))
+      services.addSingleton(
+        DataService,
+        (p) => new DataService(p.get(MainContext), p.get(TagRepositoryToken))
+      )
 
       services.addSingleton(
         StudentRepositoryToken,
@@ -266,10 +269,7 @@ app.whenReady().then(async () => {
         TrayServiceToken,
         (p) => new TrayService(p.get(MainContext), config.window)
       )
-      services.addSingleton(
-        AutoScoreServiceToken,
-        (p) => new AutoScoreService(p.get(MainContext))
-      )
+      services.addSingleton(AutoScoreServiceToken, (p) => new AutoScoreService(p.get(MainContext)))
       services.addSingleton(
         HttpServerServiceToken,
         (p) => new HttpServerService(p.get(MainContext))
@@ -294,7 +294,9 @@ app.whenReady().then(async () => {
       services.get(ReasonRepositoryToken)
       services.get(EventRepositoryToken)
       services.get(SettlementRepositoryToken)
-      const theme = services.get(ThemeServiceToken) as import('./services/ThemeService').ThemeService
+      const theme = services.get(
+        ThemeServiceToken
+      ) as import('./services/ThemeService').ThemeService
       await theme.init()
       if (!process.env.HEADLESS) {
         services.get(WindowManagerToken)
@@ -321,7 +323,9 @@ app.whenReady().then(async () => {
       services.get(ReasonRepositoryToken)
       services.get(EventRepositoryToken)
       services.get(SettlementRepositoryToken)
-      const theme = services.get(ThemeServiceToken) as import('./services/ThemeService').ThemeService
+      const theme = services.get(
+        ThemeServiceToken
+      ) as import('./services/ThemeService').ThemeService
       await theme.init()
       if (!process.env.HEADLESS) {
         services.get(WindowManagerToken)

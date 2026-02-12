@@ -59,7 +59,10 @@ export class FileSystemService extends Service {
     }
   }
 
-  async readJsonFile<T = any>(relativePath: string, folder: 'automatic' | 'script' = 'automatic'): Promise<T | null> {
+  async readJsonFile<T = any>(
+    relativePath: string,
+    folder: 'automatic' | 'script' = 'automatic'
+  ): Promise<T | null> {
     await this.initPromise
     const baseDir = folder === 'automatic' ? this.automaticDir : this.scriptDir
     const filePath = join(baseDir, relativePath)
@@ -90,7 +93,10 @@ export class FileSystemService extends Service {
       await fs.writeFile(filePath, content, 'utf-8')
       return true
     } catch (error) {
-      this.ctx.logger.warn('FileSystemService: Failed to write JSON file', { path: filePath, error })
+      this.ctx.logger.warn('FileSystemService: Failed to write JSON file', {
+        path: filePath,
+        error
+      })
       return false
     }
   }
@@ -127,12 +133,18 @@ export class FileSystemService extends Service {
       await fs.writeFile(filePath, content, 'utf-8')
       return true
     } catch (error) {
-      this.ctx.logger.warn('FileSystemService: Failed to write text file', { path: filePath, error })
+      this.ctx.logger.warn('FileSystemService: Failed to write text file', {
+        path: filePath,
+        error
+      })
       return false
     }
   }
 
-  async deleteFile(relativePath: string, folder: 'automatic' | 'script' = 'automatic'): Promise<boolean> {
+  async deleteFile(
+    relativePath: string,
+    folder: 'automatic' | 'script' = 'automatic'
+  ): Promise<boolean> {
     await this.initPromise
     const baseDir = folder === 'automatic' ? this.automaticDir : this.scriptDir
     const filePath = join(baseDir, relativePath)
@@ -180,7 +192,10 @@ export class FileSystemService extends Service {
     }
   }
 
-  async fileExists(relativePath: string, folder: 'automatic' | 'script' = 'automatic'): Promise<boolean> {
+  async fileExists(
+    relativePath: string,
+    folder: 'automatic' | 'script' = 'automatic'
+  ): Promise<boolean> {
     await this.initPromise
     const baseDir = folder === 'automatic' ? this.automaticDir : this.scriptDir
     const filePath = join(baseDir, relativePath)
@@ -193,7 +208,7 @@ export class FileSystemService extends Service {
     }
   }
 
-private get mainCtx() {
+  private get mainCtx() {
     return this.ctx as MainContext
   }
 
@@ -203,35 +218,50 @@ private get mainCtx() {
       return { success: true, data: this.getConfigStructure() }
     })
 
-    this.mainCtx.handle('fs:readJson', async (_event, relativePath: string, folder: 'automatic' | 'script') => {
-      await this.initPromise
-      const data = await this.readJsonFile(relativePath, folder)
-      return { success: true, data }
-    })
+    this.mainCtx.handle(
+      'fs:readJson',
+      async (_event, relativePath: string, folder: 'automatic' | 'script') => {
+        await this.initPromise
+        const data = await this.readJsonFile(relativePath, folder)
+        return { success: true, data }
+      }
+    )
 
-    this.mainCtx.handle('fs:writeJson', async (_event, relativePath: string, data: any, folder: 'automatic' | 'script') => {
-      await this.initPromise
-      const success = await this.writeJsonFile(relativePath, data, folder)
-      return { success }
-    })
+    this.mainCtx.handle(
+      'fs:writeJson',
+      async (_event, relativePath: string, data: any, folder: 'automatic' | 'script') => {
+        await this.initPromise
+        const success = await this.writeJsonFile(relativePath, data, folder)
+        return { success }
+      }
+    )
 
-    this.mainCtx.handle('fs:readText', async (_event, relativePath: string, folder: 'automatic' | 'script') => {
-      await this.initPromise
-      const content = await this.readTextFile(relativePath, folder)
-      return { success: true, data: content }
-    })
+    this.mainCtx.handle(
+      'fs:readText',
+      async (_event, relativePath: string, folder: 'automatic' | 'script') => {
+        await this.initPromise
+        const content = await this.readTextFile(relativePath, folder)
+        return { success: true, data: content }
+      }
+    )
 
-    this.mainCtx.handle('fs:writeText', async (_event, content: string, relativePath: string, folder: 'automatic' | 'script') => {
-      await this.initPromise
-      const success = await this.writeTextFile(content, relativePath, folder)
-      return { success }
-    })
+    this.mainCtx.handle(
+      'fs:writeText',
+      async (_event, content: string, relativePath: string, folder: 'automatic' | 'script') => {
+        await this.initPromise
+        const success = await this.writeTextFile(content, relativePath, folder)
+        return { success }
+      }
+    )
 
-    this.mainCtx.handle('fs:deleteFile', async (_event, relativePath: string, folder: 'automatic' | 'script') => {
-      await this.initPromise
-      const success = await this.deleteFile(relativePath, folder)
-      return { success }
-    })
+    this.mainCtx.handle(
+      'fs:deleteFile',
+      async (_event, relativePath: string, folder: 'automatic' | 'script') => {
+        await this.initPromise
+        const success = await this.deleteFile(relativePath, folder)
+        return { success }
+      }
+    )
 
     this.mainCtx.handle('fs:listFiles', async (_event, folder: 'automatic' | 'script') => {
       await this.initPromise
@@ -239,10 +269,13 @@ private get mainCtx() {
       return { success: true, data: files }
     })
 
-    this.mainCtx.handle('fs:fileExists', async (_event, relativePath: string, folder: 'automatic' | 'script') => {
-      await this.initPromise
-      const exists = await this.fileExists(relativePath, folder)
-      return { success: true, data: exists }
-    })
+    this.mainCtx.handle(
+      'fs:fileExists',
+      async (_event, relativePath: string, folder: 'automatic' | 'script') => {
+        await this.initPromise
+        const exists = await this.fileExists(relativePath, folder)
+        return { success: true, data: exists }
+      }
+    )
   }
 }

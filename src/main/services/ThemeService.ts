@@ -55,7 +55,7 @@ export class ThemeService extends Service {
       const savedThemeId = await this.mainCtx.settings.getValue('current_theme_id' as any)
       if (savedThemeId && typeof savedThemeId === 'string') {
         const themes = this.getThemeList()
-        const exists = themes.some(t => t.id === savedThemeId)
+        const exists = themes.some((t) => t.id === savedThemeId)
         if (exists) {
           this.currentThemeId = savedThemeId
         }
