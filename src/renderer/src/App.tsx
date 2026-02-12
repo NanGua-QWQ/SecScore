@@ -139,22 +139,32 @@ function MainContent(): React.JSX.Element {
           />
         </div>
       </Dialog>
-      {/* 开发中画面水印 */}
-      <p
-        style={{ 
+      
+      <div  style={{          
           position: 'fixed', 
+          display: 'flex',
           bottom: '2px', 
           left: '20px', 
-          opacity: 0.6, 
-          color: '#de2611', 
-          fontWeight: 'bold',
-          fontSize: '13px',
-          pointerEvents: 'none', // 防止水印干扰页面交互
-          zIndex: 9999 // 确保水印在最顶层显示
-        }}
-      >
-        开发中画面，不代表真正品质 ({getArchitecture()})
+          opacity: 0.6,          
+          zIndex: 9999 
+          }}>
+      <p style={{ 
+        color: '#de2611', 
+        fontWeight: 'bold',
+        fontSize: '13px',
+        pointerEvents: 'none', 
+      }}>
+        开发中画面,不代表最终品质
       </p>
+      <p style={{          
+        color: '#44474b', 
+        fontWeight: 'bold',
+        fontSize: '13px',
+        paddingLeft: '5px',
+      }}>
+        SecScore Dev ({getPlatform()}-{getArchitecture()})
+      </p>
+      </div>
     </Layout>
   )
 }
@@ -166,16 +176,31 @@ function getArchitecture(): string {
   
   if (userAgent.includes('arm64') || userAgent.includes('aarch64')) {
     return 'ARM64';
-  } else if (userAgent.includes('x86_64') || userAgent.includes('amd64')) {
-    return 'x86_64';
+  } else if (userAgent.includes('x64') || userAgent.includes('amd64')) {
+    return 'x64';
   } else if (userAgent.includes('i386') || userAgent.includes('i686')) {
     return 'x86';
   }
   
   // 默认返回未知架构
-  return 'Unknown';
+  return userAgent;
 }
 
+function getPlatform(): string {
+  
+  // 尝试从 userAgent 中获取平台信息
+  const userAgent = navigator.userAgent.toLowerCase();
+  
+  if (userAgent.includes('windows')) {
+    return 'Windows';
+  } else if (userAgent.includes('mac')) {
+    return 'Mac';
+  } else if (userAgent.includes('linux')) {
+    return 'Linux';
+  }
+
+  return 'Unknown';
+}
 function App(): React.JSX.Element {
   return (
     <ThemeProvider>

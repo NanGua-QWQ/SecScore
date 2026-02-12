@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Dialog, Input, Button, Space, Tag, MessagePlugin } from 'tdesign-react'
+import { useTheme } from '../contexts/ThemeContext' // 导入主题上下文
 
 interface Tag {
   id: number
@@ -25,6 +26,9 @@ export const TagEditorDialog: React.FC<TagEditorDialogProps> = ({
   const [allTags, setAllTags] = useState<Tag[]>([])
   const [selectedTagIds, setSelectedTagIds] = useState<Set<number>>(new Set(initialTagIds))
   const [loading, setLoading] = useState(false)
+  const { currentTheme } = useTheme() // 获取当前主题
+  
+  const themeMode = currentTheme?.mode || 'light'; // 默认为 light
 
   useEffect(() => {
     if (visible) {
@@ -54,8 +58,8 @@ export const TagEditorDialog: React.FC<TagEditorDialogProps> = ({
     const trimmed = inputValue.trim()
     if (!trimmed) return
 
-    if (trimmed.length > 50) {
-      MessagePlugin.error('标签名称不能超过 50 个字符')
+    if (trimmed.length > 30) {
+      MessagePlugin.error('标签名称不能超过 30 个字符')
       return
     }
 
@@ -175,7 +179,7 @@ export const TagEditorDialog: React.FC<TagEditorDialogProps> = ({
                   <Tag
                     key={tag.id}
                     theme="primary"
-                    variant="light"
+                    variant={themeMode === 'dark' ? 'outline' : 'light'} // 根据主题模式动态设置变体
                     closable
                     onClose={() => handleToggleTag(tag.id)}
                     style={{ cursor: 'pointer' }}
@@ -202,7 +206,7 @@ export const TagEditorDialog: React.FC<TagEditorDialogProps> = ({
                   <Tag
                     key={tag.id}
                     theme="default"
-                    variant="outline"
+                    variant={themeMode === 'dark' ? 'light' : 'outline'} // 根据主题模式动态设置变体
                     closable
                     onClose={() => handleDeleteTag(tag.id)}
                     style={{ cursor: 'pointer' }}
