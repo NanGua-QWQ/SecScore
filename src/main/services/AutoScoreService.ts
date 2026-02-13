@@ -6,11 +6,26 @@ interface AutoScoreRule {
   id: number
   enabled: boolean
   name: string
-  intervalMinutes: number // 间隔分钟数
-  studentNames: string[] // 学生姓名列表，空数组代表所有学生
-  scoreValue: number // 每次加分值
-  reason: string // 加分理由
-  lastExecuted?: Date // 最后执行时间
+  studentNames: string[]
+  lastExecuted?: Date
+  triggers?: { event: string; value?: string }[]
+  actions?: { event: string; value?: string; reason?: string }[]
+}
+
+interface AutoScoreRuleFileData {
+  id: number
+  enabled: boolean
+  name: string
+  studentNames: string[]
+  lastExecuted?: string
+  triggers?: { event: string; value?: string }[]
+  actions?: { event: string; value?: string; reason?: string }[]
+}
+
+interface AutoScoreRulesFile {
+  version: number
+  rules: AutoScoreRuleFileData[]
+  updatedAt?: string
 }
 
 declare module '../../shared/kernel' {
@@ -18,6 +33,8 @@ declare module '../../shared/kernel' {
     autoScore: AutoScoreService
   }
 }
+
+const RULES_FILE_NAME = 'auto-score-rules.json'
 
 export class AutoScoreService extends Service {
   private rules: AutoScoreRule[] = []
@@ -27,8 +44,6 @@ export class AutoScoreService extends Service {
   constructor(ctx: MainContext) {
     super(ctx, 'autoScore')
     this.registerIpc()
-    this.loadRulesFromSettings()
-    this.startRules()
   }
 
   private get mainCtx() {
@@ -102,9 +117,82 @@ export class AutoScoreService extends Service {
     })
   }
 
+  private async loadRulesFromFile(): Promise<void> {
+    try {
+      const fs = this.mainCtx.fileSystem
+      if (!fs) {
+        this.logger.warn('FileSystemService not available, falling back to settings')
+        await this.loadRulesFromSettings()
+        return
+      }
+
+      const data = await fs.readJsonFile<AutoScoreRulesFile>(RULES_FILE_NAME, 'automatic')
+      if (data && data.rules) {
+        this.rules = data.rules.map((rule: any) => {
+          // 数据迁移：将旧格式转换为新格式
+          const migratedRule = this.migrateRule(rule)
+          return {
+            ...migratedRule,
+            lastExecuted: migratedRule.lastExecuted ? new Date(migratedRule.lastExecuted) : undefined
+          }
+        })
+        // 如果有数据迁移，保存新格式
+        if (data.rules.some((rule: any) => rule.intervalMinutes !== undefined || rule.scoreValue !== undefined)) {
+          await this.saveRulesToFile()
+        }
+      } else {
+        await this.loadRulesFromSettings()
+        await this.saveRulesToFile()
+      }
+    } catch (error) {
+      this.logger.warn('Failed to load auto score rules from file, falling back to settings', {
+        error
+      })
+      await this.loadRulesFromSettings()
+    }
+  }
+
+  private migrateRule(rule: any): AutoScoreRule {
+    // 如果已经是新格式，直接返回
+    if (!rule.intervalMinutes && !rule.scoreValue) {
+      return rule
+    }
+
+    // 迁移旧格式到新格式
+    const migratedRule: AutoScoreRule = {
+      id: rule.id,
+      enabled: rule.enabled,
+      name: rule.name,
+      studentNames: rule.studentNames || [],
+      lastExecuted: rule.lastExecuted,
+      triggers: rule.triggers || [],
+      actions: rule.actions || []
+    }
+
+    // 将intervalMinutes迁移到triggers
+    if (rule.intervalMinutes && !migratedRule.triggers?.find(t => t.event === 'interval_time_passed')) {
+      migratedRule.triggers = migratedRule.triggers || []
+      migratedRule.triggers.push({
+        event: 'interval_time_passed',
+        value: String(rule.intervalMinutes)
+      })
+    }
+
+    // 将scoreValue和reason迁移到actions
+    if (rule.scoreValue !== undefined && !migratedRule.actions?.find(a => a.event === 'add_score')) {
+      migratedRule.actions = migratedRule.actions || []
+      migratedRule.actions.push({
+        event: 'add_score',
+        value: String(rule.scoreValue),
+        reason: rule.reason
+      })
+    }
+
+    return migratedRule
+  }
+
   private async loadRulesFromSettings() {
     try {
-      // 从设置中加载自动化规则
       const settings = await this.mainCtx.settings.getAllRaw()
       const autoScoreRulesStr = settings['auto_score_rules'] || '[]'
       const rulesFromSettings = JSON.parse(autoScoreRulesStr)
@@ -114,8 +202,37 @@ export class AutoScoreService extends Service {
         lastExecuted: rule.lastExecuted ? new Date(rule.lastExecuted) : undefined
       }))
     } catch (error) {
-      console.error('Failed to load auto score rules from settings:', error)
+      this.logger.error('Failed to load auto score rules from settings:', { error })
       this.rules = []
+    }
+  }
+
+  private async saveRulesToFile(): Promise<void> {
+    try {
+      const fs = this.mainCtx.fileSystem
+      if (!fs) {
+        this.logger.warn('FileSystemService not available, falling back to settings')
+        await this.saveRulesToSettings()
+        return
+      }
+
+      const data: AutoScoreRulesFile = {
+        version: 1,
+        rules: this.rules.map(({ lastExecuted, ...rule }) => ({
+          ...rule,
+          lastExecuted: lastExecuted?.toISOString()
+        })),
+        updatedAt: new Date().toISOString()
+      }
+
+      const success = await fs.writeJsonFile(RULES_FILE_NAME, data, 'automatic')
+      if (!success) {
+        this.logger.warn('Failed to save rules to file, falling back to settings')
+        await this.saveRulesToSettings()
+      }
+    } catch (error) {
+      this.logger.error('Failed to save auto score rules to file:', { error })
+      await this.saveRulesToSettings()
     }
   }
 
@@ -127,7 +244,7 @@ export class AutoScoreService extends Service {
       }))
       await this.mainCtx.settings.setRaw('auto_score_rules', JSON.stringify(rulesToSave))
     } catch (error) {
-      console.error('Failed to save auto score rules to settings:', error)
+      this.logger.error('Failed to save auto score rules to settings:', { error })
     }
   }
 
@@ -146,22 +263,27 @@ export class AutoScoreService extends Service {
   }
 
   private startRuleTimer(rule: AutoScoreRule) {
-    // 清除现有的定时器
     if (this.timers.has(rule.id)) {
       clearTimeout(this.timers.get(rule.id)!)
       this.timers.delete(rule.id)
     }
 
-    // 计算下次执行时间
-    const now = new Date()
-    const intervalMs = rule.intervalMinutes * 60 * 1000
+    // 从triggers中读取间隔时间
+    const intervalTrigger = rule.triggers?.find(t => t.event === 'interval_time_passed')
+    const intervalMinutes = intervalTrigger?.value ? parseInt(intervalTrigger.value, 10) : 0
+    
+    if (!intervalMinutes || intervalMinutes <= 0) {
+      this.logger.warn(`Rule ${rule.name} has no valid interval time, skipping timer`)
+      return
+    }
 
-    // 如果规则之前执行过，计算从上次执行到现在需要等待的时间
+    const now = new Date()
+    const intervalMs = intervalMinutes * 60 * 1000
+
     let delayMs = intervalMs
     if (rule.lastExecuted) {
       const timeSinceLastExecution = now.getTime() - rule.lastExecuted.getTime()
       delayMs = intervalMs - (timeSinceLastExecution % intervalMs)
-      // 如果已经超过了间隔时间，立即执行
       if (timeSinceLastExecution >= intervalMs) {
         delayMs = 0
       }
@@ -169,7 +291,6 @@ export class AutoScoreService extends Service {
 
     const timer = setTimeout(() => {
       this.executeRule(rule)
-      // 设置重复执行
       this.setRuleInterval(rule)
     }, delayMs)
 
@@ -177,7 +298,15 @@ export class AutoScoreService extends Service {
   }
 
   private setRuleInterval(rule: AutoScoreRule) {
-    const intervalMs = rule.intervalMinutes * 60 * 1000
+    // 从triggers中读取间隔时间
+    const intervalTrigger = rule.triggers?.find(t => t.event === 'interval_time_passed')
+    const intervalMinutes = intervalTrigger?.value ? parseInt(intervalTrigger.value, 10) : 0
+    
+    if (!intervalMinutes || intervalMinutes <= 0) {
+      return
+    }
+
+    const intervalMs = intervalMinutes * 60 * 1000
     const timer = setInterval(() => {
       this.executeRule(rule)
     }, intervalMs)
@@ -187,18 +316,16 @@ export class AutoScoreService extends Service {
 
   private async executeRule(rule: AutoScoreRule) {
     try {
-      console.log(`Executing auto score rule: ${rule.name}`)
+      this.logger.info(`Executing auto score rule: ${rule.name}`)
 
       const studentRepo = this.mainCtx.students
       const eventRepo = this.mainCtx.events
 
       let studentsToScore: student[] = []
       if (rule.studentNames.length === 0) {
-        // 如果没有指定学生，对所有学生加分
         const allStudents = await studentRepo.findAll()
         studentsToScore = allStudents
       } else {
-        // 否则只对指定的学生加分
         const allStudents = await studentRepo.findAll()
         for (const name of rule.studentNames) {
           const student = allStudents.find((s) => s.name === name)
@@ -208,27 +335,32 @@ export class AutoScoreService extends Service {
         }
       }
 
-      // 为每个学生添加积分事件
+      // 从actions中读取分数和理由
+      const scoreAction = rule.actions?.find(a => a.event === 'add_score')
+      const scoreValue = scoreAction?.value ? parseInt(scoreAction.value, 10) : 0
+      const reason = scoreAction?.reason || `自动化加分 - ${rule.name}`
+
       for (const student of studentsToScore) {
         await eventRepo.create({
           student_name: student.name,
-          reason_content: rule.reason || `自动化加分 - ${rule.name}`,
-          delta: rule.scoreValue
+          reason_content: reason,
+          delta: scoreValue
         })
       }
 
-      // 更新规则的最后执行时间
       rule.lastExecuted = new Date()
-      await this.saveRulesToSettings()
+      await this.saveRulesToFile()
 
-      console.log(`Auto score rule executed successfully for ${studentsToScore.length} students`)
+      this.logger.info(
+        `Auto score rule executed successfully for ${studentsToScore.length} students`
+      )
     } catch (error) {
-      console.error(`Failed to execute auto score rule ${rule.name}:`, error)
+      this.logger.error(`Failed to execute auto score rule ${rule.name}:`, { error })
     }
   }
 
   private stopRules() {
-    for (const [_, timer] of this.timers) {
+    for (const [timer] of this.timers) {
       clearTimeout(timer)
       clearInterval(timer)
     }
@@ -244,7 +376,7 @@ export class AutoScoreService extends Service {
     }
 
     this.rules.push(newRule)
-    await this.saveRulesToSettings()
+    await this.saveRulesToFile()
 
     if (rule.enabled) {
       this.startRuleTimer(newRule)
@@ -257,21 +389,17 @@ export class AutoScoreService extends Service {
     const index = this.rules.findIndex((r) => r.id === rule.id)
     if (index === -1) return false
 
-    // 停止旧的定时器
     if (this.timers.has(rule.id)) {
       clearTimeout(this.timers.get(rule.id)!)
       clearInterval(this.timers.get(rule.id)!)
       this.timers.delete(rule.id)
     }
 
-    // 更新规则
     const updatedRule = { ...this.rules[index], ...rule }
     this.rules[index] = updatedRule
 
-    // 保存到设置
-    await this.saveRulesToSettings()
+    await this.saveRulesToFile()
 
-    // 如果规则已启用，启动新的定时器
     if (updatedRule.enabled) {
       this.startRuleTimer(updatedRule)
     }
@@ -283,16 +411,14 @@ export class AutoScoreService extends Service {
     const index = this.rules.findIndex((r) => r.id === ruleId)
     if (index === -1) return false
 
-    // 停止定时器
     if (this.timers.has(ruleId)) {
       clearTimeout(this.timers.get(ruleId)!)
       clearInterval(this.timers.get(ruleId)!)
       this.timers.delete(ruleId)
     }
 
-    // 从数组中移除规则
     this.rules.splice(index, 1)
-    await this.saveRulesToSettings()
+    await this.saveRulesToFile()
 
     return true
   }
@@ -303,19 +429,17 @@ export class AutoScoreService extends Service {
 
     rule.enabled = enabled
 
-    // 停止现有定时器
     if (this.timers.has(ruleId)) {
       clearTimeout(this.timers.get(ruleId)!)
       clearInterval(this.timers.get(ruleId)!)
       this.timers.delete(ruleId)
     }
 
-    // 如果规则现在是启用的，启动定时器
     if (enabled) {
       this.startRuleTimer(rule)
     }
 
-    await this.saveRulesToSettings()
+    await this.saveRulesToFile()
     return true
   }
 
@@ -329,13 +453,12 @@ export class AutoScoreService extends Service {
 
   async restart() {
     this.stopRules()
-    await this.loadRulesFromSettings()
+    await this.loadRulesFromFile()
     this.startRules()
   }
 
   async initialize(): Promise<void> {
-    // 确保服务正确初始化
-    await this.loadRulesFromSettings()
+    await this.loadRulesFromFile()
     this.startRules()
   }
 

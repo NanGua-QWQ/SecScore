@@ -2,43 +2,36 @@ import React, { useState, useEffect } from 'react'
 import { AddIcon, Delete1Icon, MoveIcon } from 'tdesign-icons-react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { prism } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { allTriggers, allActions, TriggerItem, ActionItem } from '../services/AutoScoreService'
 import {
   Card,
   Form,
   Input,
-  InputNumber,
   Button,
   MessagePlugin,
   Table,
   PrimaryTableCol,
-  Tag,
   Space,
   Switch,
   Popconfirm,
   Radio,
   Select,
-  TooltipLite,
-  DatePicker
+  TooltipLite
 } from 'tdesign-react'
 
 interface AutoScoreRule {
   id: number
   enabled: boolean
   name: string
-  intervalMinutes: number
   studentNames: string[]
-  scoreValue: number
-  reason: string
   lastExecuted?: string
   triggers?: { event: string; value?: string }[]
+  actions?: { event: string; value?: string; reason?: string }[]
 }
 
 interface AutoScoreRuleFormValues {
   name: string
-  intervalMinutes: number
   studentNames: string
-  scoreValue: number
-  reason: string
 }
 
 export const AutoScoreManager: React.FC = () => {
@@ -55,7 +48,6 @@ export const AutoScoreManager: React.FC = () => {
 
     setLoading(true)
     try {
-      // 权限检查：确保当前为 admin
       try {
         const authRes = await (window as any).api.authGetStatus()
         if (!authRes || !authRes.success || authRes.data?.permission !== 'admin') {
@@ -64,7 +56,6 @@ export const AutoScoreManager: React.FC = () => {
           return
         }
       } catch (e) {
-        // 如果权限检查失败，继续让后端返回更明确的错误
         console.warn('Auth check failed', e)
       }
 
@@ -95,45 +86,61 @@ export const AutoScoreManager: React.FC = () => {
   const handleSubmit = async () => {
     if (!(window as any).api) return
 
-    const values = form.getFieldsValue(true) as unknown as AutoScoreRuleFormValues & {
-      timeUnit: string
-    }
+    const values = form.getFieldsValue(true) as unknown as AutoScoreRuleFormValues
 
-    if (!values.name || values.intervalMinutes == null || values.scoreValue == null) {
-      MessagePlugin.warning('请填写完整信息')
+    if (!values.name) {
+      MessagePlugin.warning('请填写自动化名称')
       return
     }
 
-    // 根据单位转换间隔时间
-    const intervalMinutes =
-      values.timeUnit === 'days' ? values.intervalMinutes * 1440 : values.intervalMinutes
+    // 验证触发器必填项
+    if (triggerList.length === 0) {
+      MessagePlugin.warning('请至少添加一个触发器')
+      return
+    }
+
+    for (const t of triggerList) {
+      const def = allTriggers.find((a) => a.eventName === t.eventName)
+      if (def?.valueType && (!t.value || String(t.value).trim() === '')) {
+        MessagePlugin.warning(`触发器 ${def.label} 需要填写 value`)
+        return
+      }
+    }
+
+    // 验证行动必填项
+    if (actionList.length === 0) {
+      MessagePlugin.warning('请至少添加一个行动')
+      return
+    }
+
+    for (const a of actionList) {
+      const def = allActions.find((action) => action.eventName === a.eventName)
+      if (def?.valueType && (!a.value || String(a.value).trim() === '')) {
+        MessagePlugin.warning(`行动 ${def.label} 需要填写 value`)
+        return
+      }
+    }
 
     // 确保 studentNames 是数组类型
     const studentNames = Array.isArray(values.studentNames) ? values.studentNames : []
 
     const triggersPayload = triggerList.map((t) => ({ event: t.eventName, value: t.value }))
+    const actionsPayload = actionList.map((a) => ({ 
+      event: a.eventName, 
+      value: a.value,
+      reason: a.reason
+    }))
 
     const ruleData = {
       enabled: true,
       name: values.name,
-      intervalMinutes,
       studentNames,
-      scoreValue: values.scoreValue,
-      reason: values.reason || `自动化加分 - ${values.name}`,
-      triggers: triggersPayload
+      triggers: triggersPayload,
+      actions: actionsPayload
     }
 
     // 权限检查：仅管理员可创建/更新自动化
     try {
-      // 验证触发器必填项（如果某个触发器需要 value，则确保已填写）
-      for (const t of triggerList) {
-        const def = allTriggers.find((a) => a.eventName === t.eventName)
-        if (def?.valueType && (!t.value || String(t.value).trim() === '')) {
-          MessagePlugin.warning(`触发器 ${def.label} 需要填写 value`)
-          return
-        }
-      }
-
       const authRes = await (window as any).api.authGetStatus()
       if (!authRes || !authRes.success || authRes.data?.permission !== 'admin') {
         MessagePlugin.error('需要管理员权限以创建或更新自动加分自动化')
@@ -161,14 +168,11 @@ export const AutoScoreManager: React.FC = () => {
         // 手动清空表单字段，避免 form.reset() 导致的栈溢出
         form.setFieldsValue({
           name: '',
-          intervalMinutes: undefined,
-          studentNames: '',
-          scoreValue: undefined,
-          reason: '',
-          timeUnit: 'minutes'
+          studentNames: ''
         })
         setEditingRuleId(null)
         setTriggerList([])
+        setActionList([])
         fetchRules() // 刷新自动化列表
       } else {
         MessagePlugin.error(
@@ -184,10 +188,7 @@ export const AutoScoreManager: React.FC = () => {
     setEditingRuleId(rule.id)
     form.setFieldsValue({
       name: rule.name,
-      intervalMinutes: rule.intervalMinutes,
-      studentNames: rule.studentNames.join(', '),
-      scoreValue: rule.scoreValue,
-      reason: rule.reason
+      studentNames: rule.studentNames.join(', ')
     })
     // 如果后端返回了 triggers 字段，把它加载到 triggerList
     if (rule.triggers && Array.isArray(rule.triggers)) {
@@ -203,6 +204,22 @@ export const AutoScoreManager: React.FC = () => {
       setTriggerList(mapped)
     } else {
       setTriggerList([])
+    }
+    // 如果后端返回了 actions 字段，把它加载到 actionList
+    if (rule.actions && Array.isArray(rule.actions)) {
+      const mapped = rule.actions.map((a, idx) => {
+        const found = allActions.find((action) => action.eventName === a.event)
+        return {
+          id: idx + 1,
+          eventName: a.event,
+          valueType: found?.valueType,
+          value: a.value ?? '',
+          reason: a.reason
+        }
+      })
+      setActionList(mapped)
+    } else {
+      setActionList([])
     }
   }
 
@@ -264,12 +281,11 @@ export const AutoScoreManager: React.FC = () => {
     // 手动清空表单字段，避免 form.reset() 导致的栈溢出
     form.setFieldsValue({
       name: '',
-      intervalMinutes: undefined,
-      studentNames: '',
-      scoreValue: undefined,
-      reason: ''
+      studentNames: ''
     })
     setEditingRuleId(null)
+    setTriggerList([])
+    setActionList([])
   }
 
   const columns: PrimaryTableCol<AutoScoreRule>[] = [
@@ -293,32 +309,49 @@ export const AutoScoreManager: React.FC = () => {
     },
     { colKey: 'name', title: '自动化名称', width: 150 },
     {
-      colKey: 'intervalMinutes',
-      title: '间隔',
-      width: 100,
+      colKey: 'triggers',
+      title: '触发器',
+      width: 150,
       cell: ({ row }) => {
-        const isDays = row.intervalMinutes >= 1440
-        const value = isDays ? row.intervalMinutes / 1440 : row.intervalMinutes
-        const unit = isDays ? '天' : '分钟'
-        return `${value} ${unit}`
+        if (!row.triggers || row.triggers.length === 0) {
+          return <span>无</span>
+        }
+        const triggerLabels = row.triggers.map((t) => {
+          const def = allTriggers.find((tr) => tr.eventName === t.event)
+          return def?.label || t.event
+        })
+        return (
+          <TooltipLite content={triggerLabels.join(', ')} showArrow placement="mouse" theme="default">
+            {row.triggers.length} 个触发器
+          </TooltipLite>
+        )
       }
     },
     {
-      colKey: 'scoreValue',
-      title: '分值',
-      width: 80,
-      cell: ({ row }) => (
-        <Tag theme={row.scoreValue > 0 ? 'success' : 'danger'} variant="light">
-          {row.scoreValue > 0 ? `+${row.scoreValue}` : row.scoreValue}
-        </Tag>
-      )
+      colKey: 'actions',
+      title: '行动',
+      width: 150,
+      cell: ({ row }) => {
+        if (!row.actions || row.actions.length === 0) {
+          return <span>无</span>
+        }
+        const actionLabels = row.actions.map((a) => {
+          const def = allActions.find((ac) => ac.eventName === a.event)
+          return def?.label || a.event
+        })
+        return (
+          <TooltipLite content={actionLabels.join(', ')} showArrow placement="mouse" theme="default">
+            {row.actions.length} 个行动
+          </TooltipLite>
+        )
+      }
     },
     {
       colKey: 'studentNames',
       title: '适用学生',
       width: 130,
       cell: ({ row }) => {
-        if (row.studentNames.length === 0) {
+        if (!row.studentNames || row.studentNames.length === 0) {
           return <span>所有学生</span>
         }
         const studentList = row.studentNames.join(',\n')
@@ -329,7 +362,6 @@ export const AutoScoreManager: React.FC = () => {
         )
       }
     },
-    { colKey: 'reason', title: '理由', width: 130, ellipsis: true },
     {
       colKey: 'lastExecuted',
       title: '最后执行',
@@ -364,47 +396,10 @@ export const AutoScoreManager: React.FC = () => {
   ]
   const onDragSort = (params: any) => setRules(params.newData)
 
-  type TriggerDef = {
-    id: number
-    label: string
-    description: string
-    eventName: string
-    valueType?: 'DatePicker' | 'Input'
-  }
-
-  const allTriggers: TriggerDef[] = [
-    {
-      id: 1,
-      label: '根据间隔时间触发',
-      description: '当学生注册时触发自动化',
-      eventName: 'interval_time_passed',
-      valueType: 'DatePicker'
-    },
-    {
-      id: 2,
-      label: '按照学生标签触发',
-      description: '当学生完成作业时触发自动化',
-      eventName: 'student_tag_matched',
-      valueType: 'Input'
-    },
-    {
-      id: 3,
-      label: '随机时间触发',
-      description: '当随机时间到达时触发自动化',
-      eventName: 'random_time_reached'
-    }
-  ]
-
   const triggerOptions = allTriggers.map((t) => ({ label: t.label, value: t.eventName }))
 
-  // triggerList items only need id, eventName, haveValue and value
-  type TriggerItem = {
-    id: number
-    eventName: string
-    value?: string
-    valueType?: 'DatePicker' | 'Input'
-  }
   const [triggerList, setTriggerList] = useState<TriggerItem[]>([])
+  const [actionList, setActionList] = useState<ActionItem[]>([])
 
   const handleTriggerChange = (id: number, value: string) => {
     const found = allTriggers.find((a) => a.eventName === value)
@@ -437,6 +432,38 @@ export const AutoScoreManager: React.FC = () => {
     ])
   }
 
+  // 行动管理相关函数
+  const handleActionChange = (id: number, value: string) => {
+    const found = allActions.find((a) => a.eventName === value)
+    setActionList((prev) =>
+      prev.map((t) =>
+        t.id === id ? { ...t, eventName: value, valueType: found?.valueType, value: '' } : t
+      )
+    )
+  }
+
+  const handleActionValueChange = (id: number, val: string) => {
+    setActionList((prev) => prev.map((t) => (t.id === id ? { ...t, value: val } : t)))
+  }
+
+  const handleDeleteAction = (id: number) => {
+    setActionList((prev) => prev.filter((t) => t.id !== id))
+  }
+
+  const handleAddAction = () => {
+    const nextId = actionList.length ? Math.max(...actionList.map((t) => t.id)) + 1 : 1
+    const defaultAction = allActions[0]
+    setActionList((prev) => [
+      ...prev,
+      {
+        id: nextId,
+        eventName: defaultAction.eventName,
+        valueType: defaultAction.valueType,
+        value: ''
+      }
+    ])
+  }
+
   const triggerItems = triggerList
     .filter((t) => t.eventName !== null)
     .map((triggerTest) => (
@@ -454,25 +481,87 @@ export const AutoScoreManager: React.FC = () => {
           placeholder="请选择触发规则"
           onChange={(value) => handleTriggerChange(triggerTest.id, value as string)}
         />
-        {triggerTest.valueType ? (
-          triggerTest.eventName === 'interval_time_passed' ? (
-            <DatePicker
-              placeholder="请选择日期"
-              style={{ width: '150px' }}
-              value={triggerTest.value ? new Date(triggerTest.value) : undefined}
-              onChange={(v) => handleValueChange(triggerTest.id, v ? String(v) : '')}
-            />
-          ) : (
-            <Input
-              placeholder="请输入Value"
-              style={{ width: '150px' }}
-              value={String(triggerTest.value ?? '')}
-              onChange={(v) =>
-                handleValueChange(triggerTest.id, String((v as any).target?.value ?? v))
-              }
-            />
-          )
-        ) : null}
+        {triggerTest.valueType
+          ? React.createElement(triggerTest.valueType, {
+              placeholder:
+                triggerTest.eventName === 'interval_time_passed' ? '请选择日期' : '请输入时间间隔（天）',
+              style: { width: '150px' },
+              value:
+                triggerTest.eventName === 'interval_time_passed'
+                  ? triggerTest.value
+                    ? new Date(triggerTest.value)
+                    : undefined
+                  : String(triggerTest.value ?? ''),
+              onChange: (v: any) => handleValueChange(triggerTest.id, v ? String(v) : '')
+            })
+          : null}
+      </div>
+    ))
+
+  const actionOptions = allActions.map((a) => ({ label: a.label, value: a.eventName }))
+
+  const actionItems = actionList
+    .filter((a) => a.eventName !== null)
+    .map((action) => (
+      <div key={action.id} style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+        <Button
+          theme="default"
+          variant="text"
+          icon={<Delete1Icon strokeWidth={2.4} />}
+          onClick={() => handleDeleteAction(action.id)}
+        />
+        <Select
+          value={action.eventName}
+          style={{ width: '200px' }}
+          options={actionOptions}
+          placeholder="请选择触发行动"
+          onChange={(value) => handleActionChange(action.id, value as string)}
+        />
+        {(() => {
+          const actionDef = allActions.find(a => a.eventName === action.eventName);
+          const renderConfig = actionDef?.renderConfig;
+          
+          // 特殊处理Radio组件
+          if (action.valueType === Radio || renderConfig?.component === Radio) {
+            return (
+              <Radio.Group
+                value={action.value || 'email'}
+                onChange={(v: any) => handleActionValueChange(action.id, v ? String(v) : '')}
+                {...renderConfig?.props}
+              >
+                {renderConfig?.props?.options?.map((option: any) => (
+                  <Radio.Button key={option.value} value={option.value}>{option.label}</Radio.Button>
+                ))}
+              </Radio.Group>
+            );
+          } else if (renderConfig?.component) {
+            return React.createElement(renderConfig.component, {
+              value: String(action.value ?? ''),
+              onChange: (v: any) => handleActionValueChange(action.id, v ? String(v) : ''),
+              ...renderConfig.props
+            });
+          } else if (action.valueType) {
+            return React.createElement(action.valueType, {
+              placeholder: '请输入Value',
+              style: { width: '150px' },
+              value: String(action.value ?? ''),
+              onChange: (v: any) => handleActionValueChange(action.id, v ? String(v) : '')
+            });
+          }
+          return null;
+        })()}
+        {action.eventName === 'add_score' && (
+          <Input
+            placeholder="请输入理由"
+            style={{ width: '150px' }}
+            value={action.reason || ''}
+            onChange={(v: any) => {
+              setActionList((prev) =>
+                prev.map((a) => (a.id === action.id ? { ...a, reason: v } : a))
+              )
+            }}
+          />
+        )}
       </div>
     ))
 
@@ -491,36 +580,6 @@ export const AutoScoreManager: React.FC = () => {
               <Input placeholder="例如：每日签到加分" />
             </Form.FormItem>
 
-            <Form.FormItem>
-              <Space>
-                <Form.FormItem
-                  label="间隔时间"
-                  name="intervalMinutes"
-                  rules={[
-                    { required: true, message: '请输入间隔时间' },
-                    { min: 1, message: '间隔时间至少为1分钟/天' }
-                  ]}
-                  style={{ marginBottom: 0 }}
-                >
-                  <InputNumber min={1} placeholder="例如：1（每隔1分钟/天执行一次）" />
-                </Form.FormItem>
-                <Form.FormItem name="timeUnit" initialData="minutes" style={{ marginBottom: 0 }}>
-                  <Radio.Group variant="default-filled">
-                    <Radio.Button value="days">天</Radio.Button>
-                    <Radio.Button value="minutes">分钟</Radio.Button>
-                  </Radio.Group>
-                </Form.FormItem>
-              </Space>
-            </Form.FormItem>
-
-            <Form.FormItem
-              label="加分值"
-              name="scoreValue"
-              rules={[{ required: true, message: '请输入加分值' }]}
-            >
-              <InputNumber placeholder="例如：1（每次加1分）" />
-            </Form.FormItem>
-
             <Form.FormItem label="适用学生" name="studentNames">
               <Select
                 filterable
@@ -528,10 +587,6 @@ export const AutoScoreManager: React.FC = () => {
                 placeholder="请选择或搜索学生（留空表示所有学生）"
                 options={students.map((student) => ({ label: student.name, value: student.name }))}
               />
-            </Form.FormItem>
-
-            <Form.FormItem label="加分理由" name="reason">
-              <Input placeholder="例如：每日签到奖励" />
             </Form.FormItem>
           </div>
 
@@ -567,7 +622,7 @@ export const AutoScoreManager: React.FC = () => {
 
       <Card
         style={{ marginBottom: '24px', backgroundColor: 'var(--ss-card-bg)' }}
-        title="当以下事件触发时"
+        title="当以下规则触发时"
         headerBordered
       >
         <Space style={{ display: 'grid' }}>
@@ -579,7 +634,26 @@ export const AutoScoreManager: React.FC = () => {
             icon={<AddIcon strokeWidth={3} />}
             onClick={handleAddTrigger}
           >
-            添加触发器
+            添加规则
+          </Button>
+        </Space>
+      </Card>
+
+      <Card
+        style={{ marginBottom: '24px', backgroundColor: 'var(--ss-card-bg)' }}
+        title="满足规则时触发的行动"
+        headerBordered
+      >
+        <Space style={{ display: 'grid' }}>
+          {actionItems}
+          <Button
+            theme="default"
+            variant="text"
+            style={{ fontWeight: 'bolder', fontSize: 15 }}
+            icon={<AddIcon strokeWidth={3} />}
+            onClick={handleAddAction}
+          >
+            添加行动
           </Button>
         </Space>
       </Card>

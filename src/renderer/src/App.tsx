@@ -140,37 +140,39 @@ function MainContent(): React.JSX.Element {
         </div>
       </Dialog>
 
-      <div
-        style={{
-          position: 'fixed',
-          display: 'flex',
-          bottom: '2px',
-          left: '20px',
-          opacity: 0.6,
-          zIndex: 9999
-        }}
-      >
-        <p
+      {import.meta.env.DEV ? (
+        <div
           style={{
-            color: '#de2611',
-            fontWeight: 'bold',
-            fontSize: '13px',
-            pointerEvents: 'none'
+            position: 'fixed',
+            display: 'flex',
+            bottom: '2px',
+            left: '20px',
+            opacity: 0.6,
+            zIndex: 9999
           }}
         >
-          开发中画面,不代表最终品质
-        </p>
-        <p
-          style={{
-            color: '#44474b',
-            fontWeight: 'bold',
-            fontSize: '13px',
-            paddingLeft: '5px'
-          }}
-        >
-          SecScore Dev ({getPlatform()}-{getArchitecture()})
-        </p>
-      </div>
+          <p
+            style={{
+              color: '#de2611',
+              fontWeight: 'bold',
+              fontSize: '13px',
+              pointerEvents: 'none'
+            }}
+          >
+            开发中画面,不代表最终品质
+          </p>
+          <p
+            style={{
+              color: '#44474b',
+              fontWeight: 'bold',
+              fontSize: '13px',
+              paddingLeft: '5px'
+            }}
+          >
+            SecScore Dev ({getPlatform()}-{getArchitecture()})
+          </p>
+        </div>
+      ) : null}
     </Layout>
   )
 }

@@ -326,7 +326,7 @@ export const Settings: React.FC<{ permission: permissionLevel }> = ({ permission
       setHttpLoading(false)
     }
   }
-
+  const currentYear = new Date().getFullYear()
   return (
     <div style={{ padding: '24px', maxWidth: '900px', margin: '0 auto' }}>
       <div
@@ -799,6 +799,8 @@ export const Settings: React.FC<{ permission: permissionLevel }> = ({ permission
             <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr', rowGap: '10px' }}>
               <div style={{ color: 'var(--ss-text-secondary)' }}>版本</div>
               <div>v1.0.0</div>
+              <div style={{ color: 'var(--ss-text-secondary)' }}>版权</div>
+              <div>{'SecScore遵循GPL3.0协议——' + 'CopyRight © 2025-' + currentYear + ' SECTL'}</div>
               <div style={{ color: 'var(--ss-text-secondary)' }}>Electron</div>
               <div>{(window as any).electron?.process?.versions?.electron || '-'}</div>
               <div style={{ color: 'var(--ss-text-secondary)' }}>Chromium</div>

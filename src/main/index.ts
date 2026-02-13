@@ -269,14 +269,14 @@ app.whenReady().then(async () => {
         TrayServiceToken,
         (p) => new TrayService(p.get(MainContext), config.window)
       )
+      services.addSingleton(
+        FileSystemServiceToken,
+        (p) => new FileSystemService(p.get(MainContext), config.configDir)
+      )
       services.addSingleton(AutoScoreServiceToken, (p) => new AutoScoreService(p.get(MainContext)))
       services.addSingleton(
         HttpServerServiceToken,
         (p) => new HttpServerService(p.get(MainContext))
-      )
-      services.addSingleton(
-        FileSystemServiceToken,
-        (p) => new FileSystemService(p.get(MainContext), config.configDir)
       )
     })
     .configure(async (_builderContext, appCtx) => {
@@ -303,10 +303,10 @@ app.whenReady().then(async () => {
         const tray = services.get(TrayServiceToken) as TrayService
         tray.initialize()
       }
-      const autoScore = services.get(AutoScoreServiceToken) as AutoScoreService
-      autoScore.initialize?.()
       services.get(HttpServerServiceToken)
       services.get(FileSystemServiceToken)
+      const autoScore = services.get(AutoScoreServiceToken) as AutoScoreService
+      await autoScore.initialize?.()
     })
     .configure(async (_builderContext, appCtx) => {
       const services = appCtx.services
