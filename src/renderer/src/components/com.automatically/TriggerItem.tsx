@@ -31,10 +31,7 @@ const TriggerItem: React.FC<TriggerItemProps> = ({ item, onDelete, onChange, onV
         onChange={(value) => onChange(item.id, value as string)}
       />
       {Component && (
-        <Component
-          value={item.value}
-          onChange={(value) => onValueChange(item.id, value)}
-        />
+        <Component value={item.value} onChange={(value) => onValueChange(item.id, value)} />
       )}
     </div>
   )

@@ -79,9 +79,7 @@ export class AutoScoreService extends Service {
   }
 
   updateTriggerEvent(triggerList: TriggerItem[], id: number, eventName: string): TriggerItem[] {
-    return triggerList.map((t) =>
-      t.id === id ? { ...t, eventName, value: '' } : t
-    )
+    return triggerList.map((t) => (t.id === id ? { ...t, eventName, value: '' } : t))
   }
 
   updateTriggerValue(triggerList: TriggerItem[], id: number, value: string): TriggerItem[] {
@@ -104,9 +102,7 @@ export class AutoScoreService extends Service {
   }
 
   updateActionEvent(actionList: ActionItem[], id: number, eventName: string): ActionItem[] {
-    return actionList.map((a) =>
-      a.id === id ? { ...a, eventName, value: '' } : a
-    )
+    return actionList.map((a) => (a.id === id ? { ...a, eventName, value: '' } : a))
   }
 
   updateActionValue(actionList: ActionItem[], id: number, value: string): ActionItem[] {

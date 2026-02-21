@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { AddIcon, MoveIcon } from 'tdesign-icons-react'
 import { allTriggers, allActions, triggerRegistry, actionRegistry } from './com.automatically'
 import type { TriggerItem, ActionItem } from './com.automatically/types'
@@ -278,9 +278,7 @@ export const AutoScoreManager: React.FC = () => {
   }
 
   const handleTriggerChange = (id: number, eventName: string) => {
-    setTriggerList((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, eventName, value: '' } : t))
-    )
+    setTriggerList((prev) => prev.map((t) => (t.id === id ? { ...t, eventName, value: '' } : t)))
   }
 
   const handleTriggerValueChange = (id: number, value: string) => {
@@ -310,9 +308,7 @@ export const AutoScoreManager: React.FC = () => {
   }
 
   const handleActionChange = (id: number, eventName: string) => {
-    setActionList((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, eventName, value: '' } : a))
-    )
+    setActionList((prev) => prev.map((a) => (a.id === id ? { ...a, eventName, value: '' } : a)))
   }
 
   const handleActionValueChange = (id: number, value: string) => {
@@ -565,7 +561,10 @@ export const AutoScoreManager: React.FC = () => {
             if (editingRuleId !== null) {
               const values = form.getFieldsValue(true) as unknown as AutoScoreRuleFormValues
               const studentNames = Array.isArray(values.studentNames) ? values.studentNames : []
-              const triggersPayload = triggerList.map((t) => ({ event: t.eventName, value: t.value }))
+              const triggersPayload = triggerList.map((t) => ({
+                event: t.eventName,
+                value: t.value
+              }))
               const actionsPayload = actionList.map((a) => ({
                 event: a.eventName,
                 value: a.value,

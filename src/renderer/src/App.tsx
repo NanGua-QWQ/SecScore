@@ -7,12 +7,12 @@ import { Wizard } from './components/Wizard'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { ThemeEditorProvider } from './contexts/ThemeEditorContext'
 import { ThemeEditor } from './components/ThemeEditor'
-import { useTheme } from './contexts/ThemeContext';
+import { useTheme } from './contexts/ThemeContext'
 
 function MainContent(): React.JSX.Element {
   const navigate = useNavigate()
   const location = useLocation()
-  const { currentTheme } = useTheme();
+  const { currentTheme } = useTheme()
 
   useEffect(() => {
     if (!(window as any).api) return

@@ -432,7 +432,9 @@ export class AutoScoreService extends Service {
         break
       }
       case 'set_student_status': {
-        this.logger.info(`Set student status action: ${action.value} (not implemented - student type has no status field)`)
+        this.logger.info(
+          `Set student status action: ${action.value} (not implemented - student type has no status field)`
+        )
         break
       }
       default:

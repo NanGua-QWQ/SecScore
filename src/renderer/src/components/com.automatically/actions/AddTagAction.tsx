@@ -1,4 +1,3 @@
-import React from 'react'
 import { Input } from 'tdesign-react'
 import type { ActionComponentProps } from '../types'
 

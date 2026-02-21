@@ -1,4 +1,3 @@
-import React from 'react'
 import { InputNumber, Row, Col } from 'tdesign-react'
 import type { TriggerComponentProps } from '../types'
 
@@ -33,7 +32,7 @@ const RandomTimeTrigger: React.FC<TriggerComponentProps> = ({ value, onChange })
   } catch {}
 
   const handleChange = (key: keyof RandomTimeConfig, v: any) => {
-    const numV = typeof v === 'number' ? v : (v ? Number(v) : undefined)
+    const numV = typeof v === 'number' ? v : v ? Number(v) : undefined
     const newConfig = { ...config, [key]: numV ?? (key === 'minHour' ? 0 : 23) }
     onChange(JSON.stringify(newConfig))
   }

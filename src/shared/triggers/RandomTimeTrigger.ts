@@ -42,7 +42,7 @@ export const randomTimeTrigger: TriggerLogic = {
     const randomHour = Math.floor(Math.random() * (maxHour - minHour + 1)) + minHour
     const randomMinute = Math.floor(Math.random() * 60)
 
-    let targetDate = new Date(now)
+    const targetDate = new Date(now)
     targetDate.setHours(randomHour, randomMinute, 0, 0)
 
     if (targetDate.getTime() <= now.getTime()) {

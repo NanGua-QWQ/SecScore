@@ -17,7 +17,11 @@ export interface TriggerLogic {
   label: string
   description: string
   validate: (value: string) => { valid: boolean; message?: string }
-  calculateNextTime?: (value: string, lastExecuted: Date | undefined, now: Date) => { delayMs: number; nextExecuteTime: Date }
+  calculateNextTime?: (
+    value: string,
+    lastExecuted: Date | undefined,
+    now: Date
+  ) => { delayMs: number; nextExecuteTime: Date }
   check?: (context: any, value: string) => { shouldExecute: boolean; message?: string }
 }
 

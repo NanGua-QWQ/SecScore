@@ -1,4 +1,3 @@
-import React from 'react'
 import { Button, Select } from 'tdesign-react'
 import { Delete1Icon } from 'tdesign-icons-react'
 import { actionRegistry, allActions } from './registry'
@@ -12,12 +11,12 @@ interface ActionItemProps {
   onReasonChange: (id: number, reason: string) => void
 }
 
-const ActionItem: React.FC<ActionItemProps> = ({ 
-  item, 
-  onDelete, 
-  onChange, 
-  onValueChange, 
-  onReasonChange 
+const ActionItem: React.FC<ActionItemProps> = ({
+  item,
+  onDelete,
+  onChange,
+  onValueChange,
+  onReasonChange
 }) => {
   const definition = actionRegistry.get(item.eventName)
   const Component = definition?.component

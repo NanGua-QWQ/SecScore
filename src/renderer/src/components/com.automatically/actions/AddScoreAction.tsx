@@ -1,4 +1,3 @@
-import React from 'react'
 import { Input } from 'tdesign-react'
 import type { ActionComponentProps } from '../types'
 
@@ -7,7 +6,12 @@ export const label = '添加分数'
 export const description = '为学生添加分数'
 export const hasReason = true
 
-const AddScoreAction: React.FC<ActionComponentProps> = ({ value, reason, onChange, onReasonChange }) => {
+const AddScoreAction: React.FC<ActionComponentProps> = ({
+  value,
+  reason,
+  onChange,
+  onReasonChange
+}) => {
   return (
     <>
       <Input

@@ -1,30 +1,30 @@
 import { actionRegistry } from '../registry'
 import type { ActionDefinition } from '../types'
 
-import AddScoreAction, { 
-  eventName as addScoreEventName, 
-  label as addScoreLabel, 
+import AddScoreAction, {
+  eventName as addScoreEventName,
+  label as addScoreLabel,
   description as addScoreDescription,
   hasReason as addScoreHasReason
 } from './AddScoreAction'
 
-import AddTagAction, { 
-  eventName as addTagEventName, 
-  label as addTagLabel, 
+import AddTagAction, {
+  eventName as addTagEventName,
+  label as addTagLabel,
   description as addTagDescription,
   hasReason as addTagHasReason
 } from './AddTagAction'
 
-import SendNotificationAction, { 
-  eventName as sendNotificationEventName, 
-  label as sendNotificationLabel, 
+import SendNotificationAction, {
+  eventName as sendNotificationEventName,
+  label as sendNotificationLabel,
   description as sendNotificationDescription,
   hasReason as sendNotificationHasReason
 } from './SendNotificationAction'
 
-import SetStudentStatusAction, { 
-  eventName as setStudentStatusEventName, 
-  label as setStudentStatusLabel, 
+import SetStudentStatusAction, {
+  eventName as setStudentStatusEventName,
+  label as setStudentStatusLabel,
   description as setStudentStatusDescription,
   hasReason as setStudentStatusHasReason
 } from './SetStudentStatusAction'
@@ -62,9 +62,4 @@ const actionDefinitions: ActionDefinition[] = [
 
 actionDefinitions.forEach((def) => actionRegistry.register(def))
 
-export { 
-  AddScoreAction, 
-  AddTagAction, 
-  SendNotificationAction, 
-  SetStudentStatusAction 
-}
+export { AddScoreAction, AddTagAction, SendNotificationAction, SetStudentStatusAction }

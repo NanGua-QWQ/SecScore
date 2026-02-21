@@ -1,4 +1,3 @@
-import React from 'react'
 import { InputNumber } from 'tdesign-react'
 import type { TriggerComponentProps } from '../types'
 
@@ -22,7 +21,7 @@ const IntervalTimeTrigger: React.FC<TriggerComponentProps> = ({ value, onChange 
   const numValue = value ? parseInt(value, 10) : undefined
 
   const handleChange = (v: any) => {
-    const numV = typeof v === 'number' ? v : (v ? Number(v) : undefined)
+    const numV = typeof v === 'number' ? v : v ? Number(v) : undefined
     onChange(numV !== undefined && numV !== null && !isNaN(numV) ? String(numV) : '')
   }
 
