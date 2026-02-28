@@ -7,6 +7,7 @@ export interface TriggerContext {
     studentNames: string[]
     triggers?: { event: string; value?: string; relation?: 'AND' | 'OR' }[]
     actions?: { event: string; value?: string; reason?: string }[]
+    lastExecuted?: Date
   }
   now: Date
 }

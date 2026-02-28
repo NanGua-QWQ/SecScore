@@ -37,9 +37,7 @@ export const intervalTimeTrigger: TriggerLogic = {
   check: (context, value) => {
     const result = intervalTimeTrigger.calculateNextTime!(
       value,
-      context.rule.triggers?.find((t) => t.event === 'interval_time_passed')
-        ? context.now
-        : undefined,
+      context.rule.lastExecuted,
       context.now
     )
     return {

@@ -400,7 +400,8 @@ export class AutoScoreService extends Service {
           name: rule.name,
           studentNames: rule.studentNames,
           triggers: rule.triggers,
-          actions: rule.actions
+          actions: rule.actions,
+          lastExecuted: rule.lastExecuted
         },
         now: new Date()
       }
