@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Select } from 'tdesign-react'
+import { Select } from 'antd'
 import type { TriggerComponentProps } from '../types'
+
 export const eventName = 'student_tag_matched'
 export const label = '当学生匹配标签时触发'
 export const description = '当学生匹配特定标签时触发自动化'
@@ -37,11 +38,11 @@ const StudentTagTrigger: React.FC<TriggerComponentProps> = ({ value, onChange })
     <Select
       placeholder="请选择标签"
       style={{ width: '150px' }}
-      value={value ?? ''}
-      onChange={(v: any) => onChange(v ? String(v) : '')}
+      value={value ?? undefined}
+      onChange={(v) => onChange(v ? String(v) : '')}
       options={tags}
-      filterable
-      clearable
+      showSearch
+      allowClear
     />
   )
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { InputNumber, Space, Radio, Form } from 'tdesign-react'
+import { InputNumber, Space, Radio } from 'antd'
 import type { TriggerComponentProps } from '../types'
 
 export const eventName = 'interval_time_passed'
@@ -22,8 +22,8 @@ const IntervalTimeTrigger: React.FC<TriggerComponentProps> = ({ value, onChange 
   const numValue = value ? parseInt(value, 10) : undefined
   const [unit, setUnit] = useState<'minutes' | 'days'>('minutes')
 
-  const handleChange = (v: any) => {
-    const numV = typeof v === 'number' ? v : v ? Number(v) : undefined
+  const handleChange = (v: number | null) => {
+    const numV = v
     if (numV === undefined || numV === null || isNaN(numV)) {
       onChange('')
       return
@@ -41,37 +41,22 @@ const IntervalTimeTrigger: React.FC<TriggerComponentProps> = ({ value, onChange 
 
   return (
     <Space>
-      <Form.FormItem
-        name="intervalMinutes"
-        rules={[
-          { required: true, message: '请输入时间' },
-          { min: 1, message: unit === 'minutes' ? '间隔时间至少为1分钟' : '间隔时间至少为1天' }
-        ]}
-        style={{ marginBottom: 0 }}
+      <InputNumber
+        placeholder={unit === 'minutes' ? '请输入时间间隔（分钟）' : '请输入时间间隔（天）'}
+        style={{ width: '100px' }}
+        value={displayValue}
+        onChange={handleChange}
+        min={1}
+      />
+      <Radio.Group
+        value={unit}
+        onChange={(e) => setUnit(e.target.value as 'minutes' | 'days')}
+        optionType="button"
+        buttonStyle="solid"
       >
-        <InputNumber
-          placeholder={unit === 'minutes' ? '请输入时间间隔（分钟）' : '请输入时间间隔（天）'}
-          style={{ width: '100px' }}
-          value={displayValue}
-          onChange={handleChange}
-          min={1}
-          theme="column"
-        />
-      </Form.FormItem>
-      <Form.FormItem
-        name="timeUnit"
-        initialData="minutes"
-        style={{ marginBottom: 0, marginLeft: -12 }}
-      >
-        <Radio.Group
-          variant="default-filled"
-          value={unit}
-          onChange={(v) => setUnit(String(v) as 'minutes' | 'days')}
-        >
-          <Radio.Button value="days">天</Radio.Button>
-          <Radio.Button value="minutes">分钟</Radio.Button>
-        </Radio.Group>
-      </Form.FormItem>
+        <Radio.Button value="days">天</Radio.Button>
+        <Radio.Button value="minutes">分钟</Radio.Button>
+      </Radio.Group>
     </Space>
   )
 }

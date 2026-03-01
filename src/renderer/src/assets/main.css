@@ -1,14 +1,4 @@
-@import 'tdesign-react/dist/reset.css';
-@import 'tdesign-react/dist/tdesign.css';
-
-/* 没用过tdesign，有ai或者人类会用顺便帮我改一下 */
-.t-layout {
-  background-color: var(--ss-bg-color) !important;
-}
-.t-default-menu{
-  background-color: transparent !important;
-}
-/* 没用过tdesign，有ai或者人类会用顺便帮我改一下 */
+@import 'antd/dist/reset.css';
 
 html,
 body,
@@ -17,11 +7,11 @@ body,
   margin: 0;
   padding: 0;
   overflow: hidden;
-  user-select: none; /* 禁用文本选择 */
+  user-select: none;
 }
 
-/* 如果某些输入框需要允许选择，可以单独开启 */
-input, textarea {
+input,
+textarea {
   user-select: text;
 }
 
@@ -29,79 +19,48 @@ input, textarea {
   color: var(--ss-sidebar-text, var(--ss-text-main));
 }
 
-.ss-sidebar .t-menu__item,
-.ss-sidebar .t-menu__item-icon {
+.ss-sidebar .ant-menu {
+  background-color: transparent !important;
+}
+
+.ss-sidebar .ant-menu-item {
   color: var(--ss-sidebar-text, var(--ss-text-main));
 }
 
-.ss-sidebar .t-menu__item--active,
-.ss-sidebar .t-menu__item.t-is-active,
-.ss-sidebar .t-menu__item--active .t-menu__item-icon,
-.ss-sidebar .t-menu__item.t-is-active .t-menu__item-icon,
-.ss-sidebar .t-menu__item--active .t-menu__content,
-.ss-sidebar .t-menu__item.t-is-active .t-menu__content {
+.ss-sidebar .ant-menu-item-selected {
+  background-color: var(--ss-sidebar-active-bg, var(--ss-item-hover, transparent)) !important;
   color: var(--ss-sidebar-active-text, var(--ss-sidebar-text, var(--ss-text-main)));
 }
 
-.ss-sidebar .t-menu__item--active,
-.ss-sidebar .t-menu__item.t-is-active {
-  background-color: var(--ss-sidebar-active-bg, var(--ss-item-hover, transparent)) !important;
-}
-
-html[theme-mode='dark'] .ss-sidebar .t-menu__item--active,
-html[theme-mode='dark'] .ss-sidebar .t-menu__item.t-is-active,
-html[theme-mode='dark'] .ss-sidebar .t-menu__item--active .t-menu__item-icon,
-html[theme-mode='dark'] .ss-sidebar .t-menu__item.t-is-active .t-menu__item-icon,
-html[theme-mode='dark'] .ss-sidebar .t-menu__item--active .t-menu__content,
-html[theme-mode='dark'] .ss-sidebar .t-menu__item.t-is-active .t-menu__content {
+html[theme-mode='dark'] .ss-sidebar .ant-menu-item-selected {
   color: #ffffff !important;
 }
 
-html[theme-mode='dark'] .ss-sidebar .t-menu__item--active svg[fill='none'],
-html[theme-mode='dark'] .ss-sidebar .t-menu__item.t-is-active svg[fill='none'] {
-  stroke: currentColor !important;
-  fill: none !important;
-}
-
-html[theme-mode='dark'] .ss-sidebar .t-menu__item--active svg:not([fill='none']),
-html[theme-mode='dark'] .ss-sidebar .t-menu__item.t-is-active svg:not([fill='none']) {
-  fill: currentColor !important;
-}
-
-.ss-sidebar .t-menu__item:hover {
-  color: var(--ss-sidebar-text, var(--ss-text-main));
-}
-
 @media (pointer: coarse) {
-  .ss-sidebar .t-menu__item {
+  .ss-sidebar .ant-menu-item {
     min-height: 48px;
     font-size: 16px;
   }
 
-  .t-button {
+  .ant-btn {
     min-height: 44px;
   }
 
-  .t-input,
-  .t-input__inner,
-  .t-select-input,
-  .t-input-number,
-  .t-input-number__input {
+  .ant-input,
+  .ant-select-selector,
+  .ant-input-number {
     min-height: 44px;
     font-size: 16px;
   }
 
-  .t-table th,
-  .t-table td {
+  .ant-table th,
+  .ant-table td {
     padding-top: 14px;
     padding-bottom: 14px;
   }
 }
 
-.ss-table-center .t-table th,
-.ss-table-center .t-table td,
-.ss-table-center .t-table th .t-table__cell,
-.ss-table-center .t-table td .t-table__cell {
+.ss-table-center .ant-table th,
+.ss-table-center .ant-table td {
   text-align: center;
-  justify-content: center;
 }

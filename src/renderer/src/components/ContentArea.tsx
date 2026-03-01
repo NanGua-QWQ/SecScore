@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react'
-import { Layout, Space, Button, Tag, Loading } from 'tdesign-react'
+import { Layout, Space, Button, Tag, Spin } from 'antd'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { WindowControls } from './WindowControls'
 import { ThemeEditor } from './ThemeEditor'
@@ -38,8 +38,7 @@ export function ContentArea({
 }: ContentAreaProps): React.JSX.Element {
   const permissionTag = (
     <Tag
-      theme={permission === 'admin' ? 'success' : permission === 'points' ? 'warning' : 'default'}
-      variant="light"
+      color={permission === 'admin' ? 'success' : permission === 'points' ? 'warning' : 'default'}
     >
       {permission === 'admin' ? '管理权限' : permission === 'points' ? '积分权限' : '只读'}
     </Tag>
@@ -83,10 +82,10 @@ export function ContentArea({
             {permissionTag}
             {hasAnyPassword && (
               <>
-                <Button size="small" variant="outline" onClick={onAuthClick}>
+                <Button size="small" onClick={onAuthClick}>
                   输入密码
                 </Button>
-                <Button size="small" variant="outline" theme="danger" onClick={onLogout}>
+                <Button size="small" danger onClick={onLogout}>
                   锁定
                 </Button>
               </>
@@ -107,7 +106,7 @@ export function ContentArea({
                 height: '100%'
               }}
             >
-              <Loading text="正在载入页面..." />
+              <Spin size="large" description="正在载入页面..." />
             </div>
           }
         >

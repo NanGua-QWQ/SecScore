@@ -93,6 +93,16 @@ export class SettingsService extends Service {
       kind: 'string',
       defaultValue: 'light-default',
       writePermission: 'admin'
+    },
+    pg_connection_string: {
+      kind: 'string',
+      defaultValue: '',
+      writePermission: 'admin'
+    },
+    pg_connection_status: {
+      kind: 'json',
+      defaultValue: { connected: false, type: 'sqlite' },
+      writePermission: 'admin'
     }
   }
 

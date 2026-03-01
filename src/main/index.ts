@@ -17,6 +17,7 @@ import { WindowManager, type windowManagerOptions } from './services/WindowManag
 import { TrayService } from './services/TrayService'
 import { AutoScoreService } from './services/AutoScoreService'
 import { FileSystemService } from './services/FileSystemService'
+import { DbConnectionService } from './services/DbConnectionService'
 import { StudentRepository } from './repos/StudentRepository'
 import { ReasonRepository } from './repos/ReasonRepository'
 import { EventRepository } from './repos/EventRepository'
@@ -50,6 +51,7 @@ type mainAppConfig = {
   logDir: string
   themeDir: string
   dbPath: string
+  pgConnectionString?: string
   window: windowManagerOptions
 }
 
@@ -191,6 +193,8 @@ app.whenReady().then(async () => {
     : ensureWritableDir(join(appRoot, 'themes'), join(dataRoot, 'themes'))
   const dbPath = is.dev ? join(process.cwd(), 'db.sqlite') : join(dataRoot, 'db.sqlite')
 
+  const pgConnectionString = process.env['PG_CONNECTION_STRING'] || undefined
+
   const config: mainAppConfig = {
     isDev: is.dev,
     appRoot,
@@ -199,6 +203,7 @@ app.whenReady().then(async () => {
     configDir,
     themeDir,
     dbPath,
+    pgConnectionString,
     window: {
       icon,
       preloadPath: join(__dirname, '../preload/index.js'),
@@ -227,7 +232,10 @@ app.whenReady().then(async () => {
         LoggerToken,
         (p) => new LoggerService(p.get(MainContext), config.logDir)
       )
-      services.addSingleton(DbManagerToken, (p) => new DbManager(p.get(MainContext), config.dbPath))
+      services.addSingleton(
+        DbManagerToken,
+        (p) => new DbManager(p.get(MainContext), config.dbPath, config.pgConnectionString)
+      )
       services.addSingleton(SettingsStoreToken, (p) => new SettingsService(p.get(MainContext)))
       services.addSingleton(SecurityServiceToken, (p) => new SecurityService(p.get(MainContext)))
       services.addSingleton(
@@ -272,14 +280,37 @@ app.whenReady().then(async () => {
         (p) => new FileSystemService(p.get(MainContext), config.configDir)
       )
       services.addSingleton(AutoScoreServiceToken, (p) => new AutoScoreService(p.get(MainContext)))
+      services.addSingleton(DbConnectionService, (p) => new DbConnectionService(p.get(MainContext)))
     })
     .configure(async (_builderContext, appCtx) => {
       const services = appCtx.services
       services.get(LoggerToken)
+      // 先初始化 db（使用默认 SQLite）
       const db = services.get(DbManagerToken) as DbManager
       await db.initialize()
+      // 然后初始化 settings
       const settings = services.get(SettingsStoreToken) as SettingsService
       await settings.initialize()
+      // 检查是否需要切换到 PostgreSQL
+      const pgConnectionString = settings.getValue('pg_connection_string')
+      if (pgConnectionString) {
+        try {
+          await db.switchConnection(pgConnectionString)
+          await settings.setValue('pg_connection_status', {
+            connected: true,
+            type: 'postgresql'
+          })
+        } catch (e: any) {
+          console.error('Failed to connect to PostgreSQL:', e)
+          await settings.setValue('pg_connection_status', {
+            connected: false,
+            type: 'postgresql',
+            error: e?.message || '连接失败'
+          })
+          // 切换回 SQLite
+          await db.switchConnection(undefined)
+        }
+      }
       services.get(SecurityServiceToken)
       services.get(PermissionServiceToken)
       services.get(AuthService)
@@ -300,32 +331,7 @@ app.whenReady().then(async () => {
       services.get(FileSystemServiceToken)
       const autoScore = services.get(AutoScoreServiceToken) as AutoScoreService
       await autoScore.initialize?.()
-    })
-    .configure(async (_builderContext, appCtx) => {
-      const services = appCtx.services
-      services.get(LoggerToken)
-      const db = services.get(DbManagerToken) as DbManager
-      await db.initialize()
-      const settings = services.get(SettingsStoreToken) as SettingsService
-      await settings.initialize()
-      services.get(SecurityServiceToken)
-      services.get(PermissionServiceToken)
-      services.get(AuthService)
-      services.get(DataService)
-      services.get(StudentRepositoryToken)
-      services.get(ReasonRepositoryToken)
-      services.get(EventRepositoryToken)
-      services.get(SettlementRepositoryToken)
-      const theme = services.get(
-        ThemeServiceToken
-      ) as import('./services/ThemeService').ThemeService
-      await theme.init()
-      if (!process.env.HEADLESS) {
-        services.get(WindowManagerToken)
-        const tray = services.get(TrayServiceToken) as TrayService
-        tray.initialize()
-      }
-      services.get(FileSystemServiceToken)
+      services.get(DbConnectionService)
     })
 
   const host = await builder.build()

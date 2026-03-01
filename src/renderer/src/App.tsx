@@ -1,23 +1,22 @@
-import { Layout, Dialog, Input, MessagePlugin } from 'tdesign-react'
+import { Layout, Modal, Input, message, ConfigProvider, theme as antTheme } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
 import { HashRouter, useLocation, useNavigate, Routes, Route } from 'react-router-dom'
 import { Sidebar } from './components/Sidebar'
 import { ContentArea } from './components/ContentArea'
 import { Wizard } from './components/Wizard'
-import { ThemeProvider } from './contexts/ThemeContext'
+import { ThemeProvider, useTheme } from './contexts/ThemeContext'
 import { ThemeEditorProvider } from './contexts/ThemeEditorContext'
 import { ThemeEditor } from './components/ThemeEditor'
-import { useTheme } from './contexts/ThemeContext'
 
 function MainContent(): React.JSX.Element {
   const navigate = useNavigate()
   const location = useLocation()
   const { currentTheme } = useTheme()
+  const [messageApi, contextHolder] = message.useMessage()
 
   useEffect(() => {
     if (!(window as any).api) return
     const unlisten = (window as any).api.onNavigate((route: string) => {
-      // 统一路径格式进行比对，防止 / 和 /home 导致重复跳转
       const currentPath = location.pathname === '/' ? '/home' : location.pathname
       const targetPath = route === '/' ? '/home' : route
 
@@ -83,9 +82,9 @@ function MainContent(): React.JSX.Element {
       setPermission(res.data.permission)
       setAuthVisible(false)
       setAuthPassword('')
-      MessagePlugin.success('权限已解锁')
+      messageApi.success('权限已解锁')
     } else {
-      MessagePlugin.error(res.message || '密码错误')
+      messageApi.error(res.message || '密码错误')
     }
   }
 
@@ -94,11 +93,11 @@ function MainContent(): React.JSX.Element {
     const res = await (window as any).api.authLogout()
     if (res?.success && res.data) {
       setPermission(res.data.permission)
-      MessagePlugin.success('已切换为只读')
+      messageApi.success('已切换为只读')
     }
   }
 
-  const onMenuChange = (v: string | number) => {
+  const onMenuChange = (v: string) => {
     const key = String(v)
     if (key === 'home') navigate('/')
     if (key === 'students') navigate('/students')
@@ -110,77 +109,90 @@ function MainContent(): React.JSX.Element {
     if (key === 'settings') navigate('/settings')
   }
 
+  const isDark = currentTheme?.mode === 'dark'
+
   return (
-    <Layout style={{ height: '100vh', flexDirection: 'row', overflow: 'hidden' }}>
-      <Sidebar activeMenu={activeMenu} permission={permission} onMenuChange={onMenuChange} />
-      <ContentArea
-        permission={permission}
-        hasAnyPassword={hasAnyPassword}
-        onAuthClick={() => setAuthVisible(true)}
-        onLogout={logout}
-      />
+    <ConfigProvider
+      theme={{
+        algorithm: isDark ? antTheme.darkAlgorithm : antTheme.defaultAlgorithm,
+        token: {
+          colorPrimary: 'var(--ant-color-primary, #1890ff)'
+        }
+      }}
+    >
+      {contextHolder}
+      <Layout style={{ height: '100vh', flexDirection: 'row', overflow: 'hidden' }}>
+        <Sidebar activeMenu={activeMenu} permission={permission} onMenuChange={onMenuChange} />
+        <ContentArea
+          permission={permission}
+          hasAnyPassword={hasAnyPassword}
+          onAuthClick={() => setAuthVisible(true)}
+          onLogout={logout}
+        />
 
-      <Wizard visible={wizardVisible} onComplete={() => setWizardVisible(false)} />
+        <Wizard visible={wizardVisible} onComplete={() => setWizardVisible(false)} />
 
-      <Dialog
-        header="权限解锁"
-        visible={authVisible}
-        onClose={() => setAuthVisible(false)}
-        onConfirm={login}
-        confirmBtn={{ content: '解锁', loading: authLoading }}
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div style={{ color: 'var(--ss-text-secondary)', fontSize: '12px' }}>
-            输入 6 位数字密码：管理密码=全功能，积分密码=仅积分操作。
-          </div>
-          <Input
-            value={authPassword}
-            onChange={(v) => setAuthPassword(v)}
-            placeholder="例如 123456"
-            maxlength={6}
-          />
-        </div>
-      </Dialog>
-
-      {import.meta.env.DEV ? (
-        <div
-          style={{
-            position: 'fixed',
-            display: 'flex',
-            bottom: '2px',
-            left: '20px',
-            opacity: 0.6,
-            zIndex: 9999
-          }}
+        <Modal
+          title="权限解锁"
+          open={authVisible}
+          onCancel={() => setAuthVisible(false)}
+          onOk={login}
+          confirmLoading={authLoading}
+          okText="解锁"
+          cancelText="取消"
         >
-          <p
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ color: 'var(--ss-text-secondary)', fontSize: '12px' }}>
+              输入 6 位数字密码：管理密码=全功能，积分密码=仅积分操作。
+            </div>
+            <Input
+              value={authPassword}
+              onChange={(e) => setAuthPassword(e.target.value)}
+              placeholder="例如 123456"
+              maxLength={6}
+            />
+          </div>
+        </Modal>
+
+        {import.meta.env.DEV ? (
+          <div
             style={{
-              color: '#df0000',
-              fontWeight: 'bold',
-              fontSize: '14px',
-              pointerEvents: 'none'
+              position: 'fixed',
+              display: 'flex',
+              bottom: '2px',
+              left: '20px',
+              opacity: 0.6,
+              zIndex: 9999
             }}
           >
-            开发中画面,不代表最终品质
-          </p>
-          <p
-            style={{
-              color: currentTheme?.mode === 'dark' ? '#fff' : '#44474b',
-              fontWeight: 'bold',
-              fontSize: '13px',
-              paddingLeft: '5px'
-            }}
-          >
-            SecScore Dev ({getPlatform()}-{getArchitecture()})
-          </p>
-        </div>
-      ) : null}
-    </Layout>
+            <p
+              style={{
+                color: '#df0000',
+                fontWeight: 'bold',
+                fontSize: '14px',
+                pointerEvents: 'none'
+              }}
+            >
+              开发中画面,不代表最终品质
+            </p>
+            <p
+              style={{
+                color: currentTheme?.mode === 'dark' ? '#fff' : '#44474b',
+                fontWeight: 'bold',
+                fontSize: '13px',
+                paddingLeft: '5px'
+              }}
+            >
+              SecScore Dev ({getPlatform()}-{getArchitecture()})
+            </p>
+          </div>
+        ) : null}
+      </Layout>
+    </ConfigProvider>
   )
 }
 
 function getArchitecture(): string {
-  // 尝试从 userAgent 中获取架构信息
   const userAgent = navigator.userAgent.toLowerCase()
 
   if (userAgent.includes('arm64') || userAgent.includes('aarch64')) {
@@ -191,12 +203,10 @@ function getArchitecture(): string {
     return 'x86'
   }
 
-  // 默认返回未知架构
   return userAgent
 }
 
 function getPlatform(): string {
-  // 尝试从 userAgent 中获取平台信息
   const userAgent = navigator.userAgent.toLowerCase()
 
   if (userAgent.includes('windows')) {

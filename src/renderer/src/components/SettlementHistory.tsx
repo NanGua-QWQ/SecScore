@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { Button, Card, MessagePlugin, Space, Table } from 'tdesign-react'
-import type { PrimaryTableCol } from 'tdesign-react'
+import { Button, Card, message, Space, Table } from 'antd'
+import type { ColumnsType } from 'antd/es/table'
 
 interface settlementSummary {
   id: number
@@ -26,6 +26,7 @@ export const SettlementHistory: React.FC = () => {
   } | null>(null)
   const [rows, setRows] = useState<settlementLeaderboardRow[]>([])
   const [detailLoading, setDetailLoading] = useState(false)
+  const [messageApi, contextHolder] = message.useMessage()
 
   const formatRange = (s: { start_time: string; end_time: string }) => {
     const start = new Date(s.start_time).toLocaleString()
@@ -39,7 +40,7 @@ export const SettlementHistory: React.FC = () => {
     try {
       const res = await (window as any).api.querySettlements()
       if (!res.success) {
-        MessagePlugin.error(res.message || '查询失败')
+        messageApi.error(res.message || '查询失败')
         return
       }
       setSettlements(res.data || [])
@@ -48,7 +49,7 @@ export const SettlementHistory: React.FC = () => {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [messageApi])
 
   useEffect(() => {
     fetchSettlements()
@@ -70,7 +71,7 @@ export const SettlementHistory: React.FC = () => {
     try {
       const res = await (window as any).api.querySettlementLeaderboard({ settlement_id: id })
       if (!res.success || !res.data) {
-        MessagePlugin.error(res.message || '查询失败')
+        messageApi.error(res.message || '查询失败')
         return
       }
       setSelectedSettlement(res.data.settlement)
@@ -82,21 +83,22 @@ export const SettlementHistory: React.FC = () => {
     }
   }
 
-  const columns: PrimaryTableCol<settlementLeaderboardRow>[] = useMemo(
+  const columns: ColumnsType<settlementLeaderboardRow> = useMemo(
     () => [
       {
-        colKey: 'rank',
         title: '排名',
+        key: 'rank',
         width: 70,
         align: 'center',
-        cell: ({ rowIndex }) => <span style={{ fontWeight: 'bold' }}>{rowIndex + 1}</span>
+        render: (_, __, index) => <span style={{ fontWeight: 'bold' }}>{index + 1}</span>
       },
-      { colKey: 'name', title: '姓名', width: 160 },
+      { title: '姓名', dataIndex: 'name', key: 'name', width: 160 },
       {
-        colKey: 'score',
         title: '阶段积分',
+        dataIndex: 'score',
+        key: 'score',
         width: 120,
-        cell: ({ row }) => <span style={{ fontWeight: 'bold' }}>{row.score}</span>
+        render: (score: number) => <span style={{ fontWeight: 'bold' }}>{score}</span>
       }
     ],
     []
@@ -105,9 +107,9 @@ export const SettlementHistory: React.FC = () => {
   if (selectedId !== null && selectedSettlement) {
     return (
       <div style={{ padding: '24px' }}>
+        {contextHolder}
         <Space style={{ marginBottom: '16px' }}>
           <Button
-            variant="outline"
             onClick={() => {
               setSelectedId(null)
               setSelectedSettlement(null)
@@ -124,14 +126,12 @@ export const SettlementHistory: React.FC = () => {
 
         <Card style={{ backgroundColor: 'var(--ss-card-bg)' }}>
           <Table
-            data={rows}
+            dataSource={rows}
             columns={columns}
             rowKey="name"
             loading={detailLoading}
             bordered
-            hover
             pagination={{ pageSize: 50, total: rows.length, defaultCurrent: 1 }}
-            scroll={{ type: 'virtual', rowHeight: 48, threshold: 100 }}
             style={{ color: 'var(--ss-text-main)' }}
           />
         </Card>
@@ -141,6 +141,7 @@ export const SettlementHistory: React.FC = () => {
 
   return (
     <div style={{ padding: '24px' }}>
+      {contextHolder}
       <h2 style={{ marginBottom: '16px', color: 'var(--ss-text-main)' }}>结算历史</h2>
       <div
         style={{
@@ -161,7 +162,7 @@ export const SettlementHistory: React.FC = () => {
               {formatRange(s)}
             </div>
             <Space>
-              <Button theme="primary" onClick={() => openSettlement(s.id)}>
+              <Button type="primary" onClick={() => openSettlement(s.id)}>
                 查看排行榜
               </Button>
               <div style={{ fontSize: '12px', color: 'var(--ss-text-secondary)' }}>

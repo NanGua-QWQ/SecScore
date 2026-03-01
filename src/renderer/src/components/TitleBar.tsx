@@ -1,5 +1,10 @@
-import { Button } from 'tdesign-react'
-import { RemoveIcon, RectangleIcon, CloseIcon, FullscreenExitIcon } from 'tdesign-icons-react'
+import { Button } from 'antd'
+import {
+  MinusOutlined,
+  BorderOutlined,
+  CloseOutlined,
+  FullscreenExitOutlined
+} from '@ant-design/icons'
 import { useEffect, useState } from 'react'
 import electronLogo from '../assets/electron.svg'
 
@@ -11,10 +16,9 @@ export function TitleBar({ children }: TitleBarProps): React.JSX.Element {
   const [isMaximized, setIsMaximized] = useState(false)
 
   useEffect(() => {
-    if (!(window as any).api) return // Check initial state
+    if (!(window as any).api) return
     ;(window as any).api.windowIsMaximized().then((v: boolean) => setIsMaximized(v))
 
-    // Subscribe to changes
     const cleanup = (window as any).api.onWindowMaximizedChanged((maximized: boolean) => {
       setIsMaximized(maximized)
     })
@@ -96,33 +100,30 @@ export function TitleBar({ children }: TitleBarProps): React.JSX.Element {
         }
       >
         <Button
-          variant="text"
-          shape="square"
+          type="text"
           onClick={minimize}
           style={{ width: '46px', height: '32px', borderRadius: 0 }}
         >
-          <RemoveIcon />
+          <MinusOutlined />
         </Button>
         <Button
-          variant="text"
-          shape="square"
+          type="text"
           onClick={maximize}
           style={{ width: '46px', height: '32px', borderRadius: 0 }}
         >
           {isMaximized ? (
-            <FullscreenExitIcon style={{ transform: 'scale(0.5)' }} />
+            <FullscreenExitOutlined style={{ transform: 'scale(0.8)' }} />
           ) : (
-            <RectangleIcon />
+            <BorderOutlined style={{ transform: 'scale(0.8)' }} />
           )}
         </Button>
         <Button
-          variant="text"
-          shape="square"
+          type="text"
           onClick={close}
           className="titlebar-close-btn"
           style={{ width: '46px', height: '32px', borderRadius: 0 }}
         >
-          <CloseIcon />
+          <CloseOutlined />
         </Button>
       </div>
 

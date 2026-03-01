@@ -1,4 +1,4 @@
-import { InputNumber, Row, Col } from 'tdesign-react'
+import { InputNumber, Space } from 'antd'
 import type { TriggerComponentProps } from '../types'
 
 export const eventName = 'random_time_reached'
@@ -33,45 +33,39 @@ const RandomTimeTrigger: React.FC<TriggerComponentProps> = ({ value, onChange })
     console.debug('RandomTimeTrigger parse error', e)
   }
 
-  const handleChange = (key: keyof RandomTimeConfig, v: any) => {
-    const numV = typeof v === 'number' ? v : v ? Number(v) : undefined
-    const newConfig = { ...config, [key]: numV ?? (key === 'minHour' ? 0 : 23) }
+  const handleChange = (key: keyof RandomTimeConfig, v: number | null) => {
+    const numV = v ?? (key === 'minHour' ? 0 : 23)
+    const newConfig = { ...config, [key]: numV }
     onChange(JSON.stringify(newConfig))
   }
 
   return (
-    <Row gutter={8}>
-      <Col>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <span style={{ fontSize: '12px', color: 'var(--ss-text-secondary)' }}>从</span>
-          <InputNumber
-            placeholder="最小小时"
-            style={{ width: '70px' }}
-            value={config.minHour}
-            onChange={(v) => handleChange('minHour', v)}
-            min={0}
-            max={23}
-            theme="column"
-          />
-          <span style={{ fontSize: '12px', color: 'var(--ss-text-secondary)' }}>时</span>
-        </div>
-      </Col>
-      <Col>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <span style={{ fontSize: '12px', color: 'var(--ss-text-secondary)' }}>到</span>
-          <InputNumber
-            placeholder="最大小时"
-            style={{ width: '70px' }}
-            value={config.maxHour}
-            onChange={(v) => handleChange('maxHour', v)}
-            min={0}
-            max={23}
-            theme="column"
-          />
-          <span style={{ fontSize: '12px', color: 'var(--ss-text-secondary)' }}>时</span>
-        </div>
-      </Col>
-    </Row>
+    <Space>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <span style={{ fontSize: '12px', color: 'var(--ss-text-secondary)' }}>从</span>
+        <InputNumber
+          placeholder="最小小时"
+          style={{ width: '70px' }}
+          value={config.minHour}
+          onChange={(v) => handleChange('minHour', v)}
+          min={0}
+          max={23}
+        />
+        <span style={{ fontSize: '12px', color: 'var(--ss-text-secondary)' }}>时</span>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <span style={{ fontSize: '12px', color: 'var(--ss-text-secondary)' }}>到</span>
+        <InputNumber
+          placeholder="最大小时"
+          style={{ width: '70px' }}
+          value={config.maxHour}
+          onChange={(v) => handleChange('maxHour', v)}
+          min={0}
+          max={23}
+        />
+        <span style={{ fontSize: '12px', color: 'var(--ss-text-secondary)' }}>时</span>
+      </div>
+    </Space>
   )
 }
 

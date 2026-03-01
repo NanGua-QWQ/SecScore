@@ -1,17 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import {
-  Tabs,
-  Card,
-  Form,
-  Select,
-  Input,
-  Button,
-  Space,
-  Divider,
-  Tag,
-  Dialog,
-  MessagePlugin
-} from 'tdesign-react'
+import { Tabs, Card, Form, Select, Input, Button, Space, Divider, Tag, Modal, message } from 'antd'
 import { useTheme } from '../contexts/ThemeContext'
 import { useThemeEditor } from '../contexts/ThemeEditorContext'
 
@@ -63,12 +51,21 @@ export const Settings: React.FC<{ permission: permissionLevel }> = ({ permission
 
   const [urlRegisterLoading, setUrlRegisterLoading] = useState(false)
   const canAdmin = permission === 'admin'
+  const [messageApi, contextHolder] = message.useMessage()
+
+  const [pgConnectionString, setPgConnectionString] = useState('')
+  const [pgConnectionStatus, setPgConnectionStatus] = useState<{
+    connected: boolean
+    type: 'sqlite' | 'postgresql'
+    error?: string
+  }>({ connected: true, type: 'sqlite' })
+  const [pgTestLoading, setPgTestLoading] = useState(false)
+  const [pgSwitchLoading, setPgSwitchLoading] = useState(false)
 
   const permissionTag = useMemo(() => {
     return (
       <Tag
-        theme={permission === 'admin' ? 'success' : permission === 'points' ? 'warning' : 'default'}
-        variant="light"
+        color={permission === 'admin' ? 'success' : permission === 'points' ? 'warning' : 'default'}
       >
         {permission === 'admin' ? '管理权限' : permission === 'points' ? '积分权限' : '只读'}
       </Tag>
@@ -84,6 +81,8 @@ export const Settings: React.FC<{ permission: permissionLevel }> = ({ permission
     const res = await (window as any).api.getAllSettings()
     if (res.success && res.data) {
       setSettings(res.data)
+      setPgConnectionString(res.data.pg_connection_string || '')
+      setPgConnectionStatus(res.data.pg_connection_status || { connected: true, type: 'sqlite' })
     }
     const authRes = await (window as any).api.authGetStatus()
     if (authRes.success && authRes.data) setSecurityStatus(authRes.data)
@@ -114,7 +113,7 @@ export const Settings: React.FC<{ permission: permissionLevel }> = ({ permission
     const res = await (window as any).api.queryLogs(200)
     setLogsLoading(false)
     if (!res.success) {
-      MessagePlugin.error(res.message || '读取日志失败')
+      messageApi.error(res.message || '读取日志失败')
       return
     }
     setLogsText((res.data || []).join('\n'))
@@ -125,12 +124,12 @@ export const Settings: React.FC<{ permission: permissionLevel }> = ({ permission
     if (!(window as any).api) return
     const res = await (window as any).api.queryLogs(5000)
     if (!res.success) {
-      MessagePlugin.error(res.message || '读取日志失败')
+      messageApi.error(res.message || '读取日志失败')
       return
     }
     const dateTime = new Date().toISOString().replace(/[:.]/g, '-')
     downloadTextFile(`secscore_logs_${dateTime}.txt`, `${(res.data || []).join('\n')}\n`)
-    MessagePlugin.success('日志已导出')
+    messageApi.success('日志已导出')
   }
 
   const downloadTextFile = (filename: string, text: string) => {
@@ -156,7 +155,7 @@ export const Settings: React.FC<{ permission: permissionLevel }> = ({ permission
     if (!(window as any).api) return
     const res = await (window as any).api.exportDataJson()
     if (!res.success || !res.data) {
-      MessagePlugin.error(res.message || '导出失败')
+      messageApi.error(res.message || '导出失败')
       return
     }
     const blob = new Blob([res.data], { type: 'application/json;charset=utf-8' })
@@ -166,7 +165,7 @@ export const Settings: React.FC<{ permission: permissionLevel }> = ({ permission
     a.download = `secscore_export_${new Date().toISOString().slice(0, 10)}.json`
     a.click()
     URL.revokeObjectURL(url)
-    MessagePlugin.success('导出成功')
+    messageApi.success('导出成功')
   }
 
   const importJson = async (file: File) => {
@@ -174,10 +173,10 @@ export const Settings: React.FC<{ permission: permissionLevel }> = ({ permission
     const text = await file.text()
     const res = await (window as any).api.importDataJson(text)
     if (res.success) {
-      MessagePlugin.success('导入成功，正在刷新')
+      messageApi.success('导入成功，正在刷新')
       setTimeout(() => window.location.reload(), 300)
     } else {
-      MessagePlugin.error(res.message || '导入失败')
+      messageApi.error(res.message || '导入失败')
     }
   }
 
@@ -194,10 +193,10 @@ export const Settings: React.FC<{ permission: permissionLevel }> = ({ permission
       if (res.data?.recoveryString) {
         showRecoveryDialog('找回字符串（请妥善保存）', res.data.recoveryString)
       } else {
-        MessagePlugin.success('密码已更新')
+        messageApi.success('密码已更新')
       }
     } else {
-      MessagePlugin.error(res.message || '更新失败')
+      messageApi.error(res.message || '更新失败')
     }
   }
 
@@ -205,7 +204,7 @@ export const Settings: React.FC<{ permission: permissionLevel }> = ({ permission
     if (!(window as any).api) return
     const res = await (window as any).api.authGenerateRecovery()
     if (!res.success || !res.data?.recoveryString) {
-      MessagePlugin.error(res.message || '生成失败')
+      messageApi.error(res.message || '生成失败')
       return
     }
     await loadAll()
@@ -216,7 +215,7 @@ export const Settings: React.FC<{ permission: permissionLevel }> = ({ permission
     if (!(window as any).api) return
     const res = await (window as any).api.authResetByRecovery(recoveryToReset)
     if (!res.success || !res.data?.recoveryString) {
-      MessagePlugin.error(res.message || '重置失败')
+      messageApi.error(res.message || '重置失败')
       return
     }
     setRecoveryToReset('')
@@ -225,7 +224,6 @@ export const Settings: React.FC<{ permission: permissionLevel }> = ({ permission
   }
 
   const clearAllPasswords = () => {
-    if (!(window as any).api) return
     setClearDialogVisible(true)
   }
 
@@ -235,99 +233,144 @@ export const Settings: React.FC<{ permission: permissionLevel }> = ({ permission
     const res = await (window as any).api.authClearAll()
     setClearLoading(false)
     if (res.success) {
-      MessagePlugin.success('已清空')
+      messageApi.success('已清空')
       await loadAll()
       setClearDialogVisible(false)
     } else {
-      MessagePlugin.error(res.message || '清空失败')
+      messageApi.error(res.message || '清空失败')
     }
   }
 
   const confirmSettlement = () => {
-    if (!(window as any).api) return
     setSettleDialogVisible(true)
   }
 
+  const testPgConnection = async () => {
+    if (!(window as any).api) return
+    if (!pgConnectionString) {
+      messageApi.warning('请输入 PostgreSQL 连接字符串')
+      return
+    }
+    setPgTestLoading(true)
+    try {
+      const res = await (window as any).api.dbTestConnection(pgConnectionString)
+      if (res.success && res.data?.success) {
+        messageApi.success('连接测试成功')
+      } else {
+        messageApi.error(res.data?.error || res.message || '连接测试失败')
+      }
+    } catch (e: any) {
+      messageApi.error(e?.message || '连接测试失败')
+    } finally {
+      setPgTestLoading(false)
+    }
+  }
+
+  const switchToPg = async () => {
+    if (!(window as any).api) return
+    setPgSwitchLoading(true)
+    try {
+      const res = await (window as any).api.dbSwitchConnection(pgConnectionString)
+      if (res.success) {
+        messageApi.success(
+          `已切换到 ${res.data?.type === 'postgresql' ? 'PostgreSQL' : 'SQLite'} 数据库`
+        )
+        await loadAll()
+      } else {
+        messageApi.error(res.message || '切换失败')
+      }
+    } catch (e: any) {
+      messageApi.error(e?.message || '切换失败')
+    } finally {
+      setPgSwitchLoading(false)
+    }
+  }
+
+  const switchToSQLite = async () => {
+    if (!(window as any).api) return
+    setPgSwitchLoading(true)
+    try {
+      const res = await (window as any).api.dbSwitchConnection('')
+      if (res.success) {
+        messageApi.success('已切换到本地 SQLite 数据库')
+        setPgConnectionString('')
+        await loadAll()
+      } else {
+        messageApi.error(res.message || '切换失败')
+      }
+    } catch (e: any) {
+      messageApi.error(e?.message || '切换失败')
+    } finally {
+      setPgSwitchLoading(false)
+    }
+  }
+
   const currentYear = new Date().getFullYear()
-  return (
-    <div style={{ padding: '24px', maxWidth: '900px', margin: '0 auto' }}>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '16px'
-        }}
-      >
-        <h2 style={{ margin: 0, color: 'var(--ss-text-main)' }}>系统设置</h2>
-        {permissionTag}
-      </div>
 
-      <Tabs value={activeTab} onChange={(v) => setActiveTab(v as string)}>
-        <Tabs.TabPanel value="appearance" label="外观">
-          <Card style={{ backgroundColor: 'var(--ss-card-bg)', color: 'var(--ss-text-main)' }}>
-            <Form labelWidth={120}>
-              <Form.FormItem label="当前主题">
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  <Select
-                    value={currentTheme?.id}
-                    onChange={(v) => setTheme(v as string)}
-                    style={{ width: '200px' }}
-                  >
-                    {themes.map((t) => (
-                      <Select.Option key={t.id} value={t.id} label={t.name} />
-                    ))}
-                  </Select>
-                  <Button
-                    variant="outline"
-                    theme="default"
-                    onClick={() => startEditing(currentTheme || undefined)}
-                  >
-                    编辑
-                  </Button>
-                  <Button variant="text" theme="primary" onClick={() => startEditing()}>
-                    新建主题
-                  </Button>
-                </div>
-              </Form.FormItem>
-
-              <Form.FormItem label="界面缩放">
+  const tabItems = [
+    {
+      key: 'appearance',
+      label: '外观',
+      children: (
+        <Card style={{ backgroundColor: 'var(--ss-card-bg)', color: 'var(--ss-text-main)' }}>
+          <Form layout="horizontal" labelCol={{ span: 4 }} wrapperCol={{ span: 20 }}>
+            <Form.Item label="当前主题">
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 <Select
-                  value={settings.window_zoom || '1.0'}
-                  onChange={async (v) => {
-                    if (!(window as any).api) return
-                    const next = String(v)
-                    const res = await (window as any).api.setSetting('window_zoom', next)
-                    if (res.success) {
-                      setSettings((prev) => ({ ...prev, window_zoom: next }))
-                      MessagePlugin.success('界面缩放已更新')
-                    } else {
-                      MessagePlugin.error(res.message || '更新失败')
-                    }
-                  }}
-                  style={{ width: '320px' }}
-                  disabled={!canAdmin}
-                >
-                  <Select.Option value="0.7" label="70% (较小)" />
-                  <Select.Option value="0.8" label="80%" />
-                  <Select.Option value="0.9" label="90%" />
-                  <Select.Option value="1.0" label="100% (默认)" />
-                  <Select.Option value="1.1" label="110%" />
-                  <Select.Option value="1.2" label="120%" />
-                  <Select.Option value="1.3" label="130%" />
-                  <Select.Option value="1.5" label="150% (较大)" />
-                </Select>
-                <div
-                  style={{ marginTop: '4px', fontSize: '12px', color: 'var(--ss-text-secondary)' }}
-                >
-                  调节应用界面的整体大小。
-                </div>
-              </Form.FormItem>
-            </Form>
-          </Card>
-        </Tabs.TabPanel>
+                  value={currentTheme?.id}
+                  onChange={(v) => setTheme(v as string)}
+                  style={{ width: '200px' }}
+                  options={themes.map((t) => ({ value: t.id, label: t.name }))}
+                />
+                <Button onClick={() => startEditing(currentTheme || undefined)}>编辑</Button>
+                <Button type="link" onClick={() => startEditing()}>
+                  新建主题
+                </Button>
+              </div>
+            </Form.Item>
 
-        <Tabs.TabPanel value="security" label="安全">
+            <Form.Item label="界面缩放">
+              <Select
+                value={settings.window_zoom || '1.0'}
+                onChange={async (v) => {
+                  if (!(window as any).api) return
+                  const next = String(v)
+                  const res = await (window as any).api.setSetting('window_zoom', next)
+                  if (res.success) {
+                    setSettings((prev) => ({ ...prev, window_zoom: next }))
+                    messageApi.success('界面缩放已更新')
+                  } else {
+                    messageApi.error(res.message || '更新失败')
+                  }
+                }}
+                style={{ width: '320px' }}
+                disabled={!canAdmin}
+                options={[
+                  { value: '0.7', label: '70% (较小)' },
+                  { value: '0.8', label: '80%' },
+                  { value: '0.9', label: '90%' },
+                  { value: '1.0', label: '100% (默认)' },
+                  { value: '1.1', label: '110%' },
+                  { value: '1.2', label: '120%' },
+                  { value: '1.3', label: '130%' },
+                  { value: '1.5', label: '150% (较大)' }
+                ]}
+              />
+              <div
+                style={{ marginTop: '4px', fontSize: '12px', color: 'var(--ss-text-secondary)' }}
+              >
+                调节应用界面的整体大小。
+              </div>
+            </Form.Item>
+          </Form>
+        </Card>
+      )
+    },
+    {
+      key: 'security',
+      label: '安全',
+      children: (
+        <>
           <Card
             style={{
               backgroundColor: 'var(--ss-card-bg)',
@@ -338,22 +381,13 @@ export const Settings: React.FC<{ permission: permissionLevel }> = ({ permission
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ fontWeight: 600 }}>密码保护系统</div>
               <Space>
-                <Tag
-                  theme={securityStatus?.hasAdminPassword ? 'success' : 'default'}
-                  variant="light"
-                >
+                <Tag color={securityStatus?.hasAdminPassword ? 'success' : 'default'}>
                   管理密码 {securityStatus?.hasAdminPassword ? '已设置' : '未设置'}
                 </Tag>
-                <Tag
-                  theme={securityStatus?.hasPointsPassword ? 'success' : 'default'}
-                  variant="light"
-                >
+                <Tag color={securityStatus?.hasPointsPassword ? 'success' : 'default'}>
                   积分密码 {securityStatus?.hasPointsPassword ? '已设置' : '未设置'}
                 </Tag>
-                <Tag
-                  theme={securityStatus?.hasRecoveryString ? 'success' : 'default'}
-                  variant="light"
-                >
+                <Tag color={securityStatus?.hasRecoveryString ? 'success' : 'default'}>
                   找回字符串 {securityStatus?.hasRecoveryString ? '已生成' : '未生成'}
                 </Tag>
               </Space>
@@ -361,53 +395,47 @@ export const Settings: React.FC<{ permission: permissionLevel }> = ({ permission
 
             <Divider />
 
-            <Form labelWidth={120}>
-              <Form.FormItem label="管理密码">
+            <Form layout="horizontal" labelCol={{ span: 4 }} wrapperCol={{ span: 20 }}>
+              <Form.Item label="管理密码">
                 <Input
                   value={adminPassword}
-                  onChange={(v) => setAdminPassword(v)}
+                  onChange={(e) => setAdminPassword(e.target.value)}
                   placeholder="输入6位数字（留空则不修改）"
-                  maxlength={6}
+                  maxLength={6}
                   disabled={!canAdmin && Boolean(securityStatus?.hasAdminPassword)}
                 />
-              </Form.FormItem>
+              </Form.Item>
 
-              <Form.FormItem label="积分密码">
+              <Form.Item label="积分密码">
                 <Input
                   value={pointsPassword}
-                  onChange={(v) => setPointsPassword(v)}
+                  onChange={(e) => setPointsPassword(e.target.value)}
                   placeholder="输入6位数字（留空则不修改）"
-                  maxlength={6}
+                  maxLength={6}
                   disabled={!canAdmin && Boolean(securityStatus?.hasAdminPassword)}
                 />
-              </Form.FormItem>
+              </Form.Item>
 
-              <Form.FormItem label="操作">
+              <Form.Item label="操作">
                 <Space>
                   <Button
-                    theme="primary"
+                    type="primary"
                     onClick={savePasswords}
                     disabled={!canAdmin && Boolean(securityStatus?.hasAdminPassword)}
                   >
                     保存密码
                   </Button>
                   <Button
-                    variant="outline"
                     onClick={generateRecovery}
                     disabled={!canAdmin && Boolean(securityStatus?.hasAdminPassword)}
                   >
                     生成找回字符串
                   </Button>
-                  <Button
-                    theme="danger"
-                    variant="outline"
-                    onClick={clearAllPasswords}
-                    disabled={!canAdmin}
-                  >
+                  <Button danger onClick={clearAllPasswords} disabled={!canAdmin}>
                     清空所有密码
                   </Button>
                 </Space>
-              </Form.FormItem>
+              </Form.Item>
             </Form>
           </Card>
 
@@ -416,11 +444,11 @@ export const Settings: React.FC<{ permission: permissionLevel }> = ({ permission
             <Space>
               <Input
                 value={recoveryToReset}
-                onChange={(v) => setRecoveryToReset(v)}
+                onChange={(e) => setRecoveryToReset(e.target.value)}
                 placeholder="输入找回字符串"
                 style={{ width: '420px' }}
               />
-              <Button theme="primary" variant="outline" onClick={resetByRecovery}>
+              <Button type="primary" onClick={resetByRecovery}>
                 重置密码
               </Button>
             </Space>
@@ -428,9 +456,109 @@ export const Settings: React.FC<{ permission: permissionLevel }> = ({ permission
               重置会清空管理/积分密码，并生成新的找回字符串。
             </div>
           </Card>
-        </Tabs.TabPanel>
+        </>
+      )
+    },
+    {
+      key: 'database',
+      label: '数据库连接',
+      children: (
+        <>
+          <Card
+            style={{
+              backgroundColor: 'var(--ss-card-bg)',
+              color: 'var(--ss-text-main)',
+              marginBottom: '16px'
+            }}
+          >
+            <div style={{ fontWeight: 600, marginBottom: '12px' }}>当前数据库状态</div>
+            <Space>
+              <Tag color={pgConnectionStatus.type === 'postgresql' ? 'blue' : 'green'}>
+                {pgConnectionStatus.type === 'postgresql'
+                  ? 'PostgreSQL 远程数据库'
+                  : 'SQLite 本地数据库'}
+              </Tag>
+              <Tag color={pgConnectionStatus.connected ? 'success' : 'error'}>
+                {pgConnectionStatus.connected ? '已连接' : '未连接'}
+              </Tag>
+              {pgConnectionStatus.error && (
+                <span style={{ color: 'var(--ant-color-error, #ff4d4f)', fontSize: '12px' }}>
+                  {pgConnectionStatus.error}
+                </span>
+              )}
+            </Space>
+          </Card>
 
-        <Tabs.TabPanel value="data" label="数据管理">
+          <Card
+            style={{
+              backgroundColor: 'var(--ss-card-bg)',
+              color: 'var(--ss-text-main)',
+              marginBottom: '16px'
+            }}
+          >
+            <div style={{ fontWeight: 600, marginBottom: '12px' }}>PostgreSQL 远程连接</div>
+            <div
+              style={{ marginBottom: '12px', fontSize: '12px', color: 'var(--ss-text-secondary)' }}
+            >
+              输入 PostgreSQL 连接字符串以连接远程数据库，支持多端同步操作。
+            </div>
+            <Space.Compact style={{ width: '100%', marginBottom: '12px' }}>
+              <Input
+                value={pgConnectionString}
+                onChange={(e) => setPgConnectionString(e.target.value)}
+                placeholder="postgresql://user:password@host:port/database?sslmode=require"
+                style={{ flex: 1 }}
+                disabled={!canAdmin}
+              />
+              <Button
+                onClick={testPgConnection}
+                loading={pgTestLoading}
+                disabled={!canAdmin || !pgConnectionString}
+              >
+                测试连接
+              </Button>
+            </Space.Compact>
+            <div
+              style={{ marginBottom: '12px', fontSize: '12px', color: 'var(--ss-text-secondary)' }}
+            >
+              示例：postgresql://xxxxxx_xxxxx:xxxxxxxx@xx-xxx.xxx.neon.xxxx/xxxxdxx?sslmode=require
+            </div>
+            <Space>
+              <Button
+                type="primary"
+                onClick={switchToPg}
+                loading={pgSwitchLoading}
+                disabled={!canAdmin || !pgConnectionString}
+              >
+                切换到 PostgreSQL
+              </Button>
+              <Button
+                onClick={switchToSQLite}
+                loading={pgSwitchLoading}
+                disabled={!canAdmin || pgConnectionStatus.type === 'sqlite'}
+              >
+                切换到本地 SQLite
+              </Button>
+            </Space>
+          </Card>
+
+          <Card style={{ backgroundColor: 'var(--ss-card-bg)', color: 'var(--ss-text-main)' }}>
+            <div style={{ fontWeight: 600, marginBottom: '12px' }}>多端同步说明</div>
+            <div style={{ fontSize: '13px', color: 'var(--ss-text-secondary)', lineHeight: '1.8' }}>
+              <p>• 使用 PostgreSQL 远程数据库可以实现多端数据同步。</p>
+              <p>• 系统内置操作队列机制，确保多端同时操作时数据一致性。</p>
+              <p>• 切换数据库后需要重启应用以生效。</p>
+              <p>• 建议使用云数据库服务（如 Neon、Supabase、AWS RDS 等）。</p>
+            </div>
+          </Card>
+        </>
+      )
+    },
+    {
+      key: 'data',
+      label: '数据管理',
+      children: (
+        <>
           <Card
             title="结算"
             style={{
@@ -441,8 +569,7 @@ export const Settings: React.FC<{ permission: permissionLevel }> = ({ permission
           >
             <Space align="center">
               <Button
-                theme="danger"
-                variant="outline"
+                danger
                 disabled={!canAdmin}
                 loading={settleLoading}
                 onClick={confirmSettlement}
@@ -464,12 +591,10 @@ export const Settings: React.FC<{ permission: permissionLevel }> = ({ permission
           >
             <div style={{ fontWeight: 600, marginBottom: '12px' }}>导入 / 导出</div>
             <Space>
-              <Button theme="primary" onClick={exportJson}>
+              <Button type="primary" onClick={exportJson}>
                 导出 JSON
               </Button>
-              <Button variant="outline" onClick={() => importInputRef.current?.click()}>
-                导入 JSON
-              </Button>
+              <Button onClick={() => importInputRef.current?.click()}>导入 JSON</Button>
               <input
                 ref={importInputRef}
                 type="file"
@@ -491,8 +616,8 @@ export const Settings: React.FC<{ permission: permissionLevel }> = ({ permission
             title="日志"
             style={{ backgroundColor: 'var(--ss-card-bg)', color: 'var(--ss-text-main)' }}
           >
-            <Form labelWidth={120}>
-              <Form.FormItem label="日志级别">
+            <Form layout="horizontal" labelCol={{ span: 4 }} wrapperCol={{ span: 20 }}>
+              <Form.Item label="日志级别">
                 <Select
                   value={settings.log_level}
                   onChange={async (v) => {
@@ -501,165 +626,173 @@ export const Settings: React.FC<{ permission: permissionLevel }> = ({ permission
                     const res = await (window as any).api.setSetting('log_level', next)
                     if (res.success) {
                       setSettings((prev) => ({ ...prev, log_level: next }))
-                      MessagePlugin.success('日志级别已更新')
+                      messageApi.success('日志级别已更新')
                     } else {
-                      MessagePlugin.error(res.message || '更新失败')
+                      messageApi.error(res.message || '更新失败')
                     }
                   }}
                   style={{ width: '320px' }}
-                >
-                  <Select.Option value="debug" label="DEBUG (调试)" />
-                  <Select.Option value="info" label="INFO (信息)" />
-                  <Select.Option value="warn" label="WARN (警告)" />
-                  <Select.Option value="error" label="ERROR (错误)" />
-                </Select>
-              </Form.FormItem>
-              <Form.FormItem label="日志操作">
+                  options={[
+                    { value: 'debug', label: 'DEBUG (调试)' },
+                    { value: 'info', label: 'INFO (信息)' },
+                    { value: 'warn', label: 'WARN (警告)' },
+                    { value: 'error', label: 'ERROR (错误)' }
+                  ]}
+                />
+              </Form.Item>
+              <Form.Item label="日志操作">
                 <Space>
-                  <Button variant="outline" loading={logsLoading} onClick={showLogs}>
+                  <Button loading={logsLoading} onClick={showLogs}>
                     查看日志
                   </Button>
-                  <Button variant="outline" onClick={exportLogs}>
-                    导出日志
-                  </Button>
+                  <Button onClick={exportLogs}>导出日志</Button>
                   <Button
-                    theme="danger"
-                    variant="outline"
+                    danger
                     onClick={async () => {
                       if (!(window as any).api) return
                       const res = await (window as any).api.clearLogs()
-                      if (res.success) MessagePlugin.success('日志已清空')
-                      else MessagePlugin.error(res.message || '清空失败')
+                      if (res.success) messageApi.success('日志已清空')
+                      else messageApi.error(res.message || '清空失败')
                     }}
                   >
                     清空日志
                   </Button>
                 </Space>
-              </Form.FormItem>
+              </Form.Item>
             </Form>
           </Card>
-        </Tabs.TabPanel>
-
-        <Tabs.TabPanel value="url" label="URL 链接">
-          <Card style={{ backgroundColor: 'var(--ss-card-bg)', color: 'var(--ss-text-main)' }}>
-            <div style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>
-              URL 协议 (secscore://)
-            </div>
-            <Divider />
-            <div
-              style={{
-                marginBottom: '12px',
-                fontSize: '13px',
-                color: 'var(--ss-text-secondary)'
+        </>
+      )
+    },
+    {
+      key: 'url',
+      label: 'URL 链接',
+      children: (
+        <Card style={{ backgroundColor: 'var(--ss-card-bg)', color: 'var(--ss-text-main)' }}>
+          <div style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>
+            URL 协议 (secscore://)
+          </div>
+          <Divider />
+          <div
+            style={{ marginBottom: '12px', fontSize: '13px', color: 'var(--ss-text-secondary)' }}
+          >
+            可以通过 URL 链接唤起 SecScore 并执行操作，例如：
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '4px',
+              fontSize: '12px',
+              fontFamily:
+                'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", monospace'
+            }}
+          >
+            <div>secscore://settings</div>
+            <div>secscore://score</div>
+            <div>secscore://sidebar/toggle</div>
+          </div>
+          <Divider />
+          <Space>
+            <Button
+              type="primary"
+              loading={urlRegisterLoading}
+              disabled={!canAdmin}
+              onClick={async () => {
+                if (!(window as any).api) return
+                setUrlRegisterLoading(true)
+                const res = await (window as any).api.registerUrlProtocol()
+                setUrlRegisterLoading(false)
+                if (res && res.success) {
+                  messageApi.success('URL 协议已注册')
+                } else {
+                  messageApi.error(res?.message || '注册失败')
+                }
               }}
             >
-              可以通过 URL 链接唤起 SecScore 并执行操作，例如：
+              注册 URL 协议
+            </Button>
+          </Space>
+          <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--ss-text-secondary)' }}>
+            需要安装版 SecScore，开发模式下可能无效。
+          </div>
+        </Card>
+      )
+    },
+    {
+      key: 'about',
+      label: '关于',
+      children: (
+        <Card style={{ backgroundColor: 'var(--ss-card-bg)', color: 'var(--ss-text-main)' }}>
+          <div style={{ fontSize: '16px', fontWeight: 700, marginBottom: '8px' }}>SecScore</div>
+          <div style={{ color: 'var(--ss-text-secondary)', marginBottom: '16px' }}>
+            教育积分管理
+          </div>
+          <Divider />
+          <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr', rowGap: '10px' }}>
+            <div style={{ color: 'var(--ss-text-secondary)' }}>版本</div>
+            <div>v1.0.0</div>
+            <div style={{ color: 'var(--ss-text-secondary)' }}>版权</div>
+            <div>{'SecScore遵循GPL3.0协议——' + 'CopyRight © 2025-' + currentYear + ' SECTL'}</div>
+            <div style={{ color: 'var(--ss-text-secondary)' }}>Electron</div>
+            <div>{(window as any).electron?.process?.versions?.electron || '-'}</div>
+            <div style={{ color: 'var(--ss-text-secondary)' }}>Chromium</div>
+            <div>{(window as any).electron?.process?.versions?.chrome || '-'}</div>
+            <div style={{ color: 'var(--ss-text-secondary)' }}>Node</div>
+            <div>{(window as any).electron?.process?.versions?.node || '-'}</div>
+            <div style={{ color: 'var(--ss-text-secondary)' }}>IPC 状态</div>
+            <div>
+              <Tag color={(window as any).api ? 'success' : 'error'}>
+                {(window as any).api ? '已连接' : '未连接 (Preload 失败)'}
+              </Tag>
             </div>
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '4px',
-                fontSize: '12px',
-                fontFamily:
-                  'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", monospace'
+            <div style={{ color: 'var(--ss-text-secondary)' }}>环境</div>
+            <div>
+              <Tag>{import.meta.env.DEV ? 'Development' : 'Production'}</Tag>
+            </div>
+          </div>
+          <Divider />
+          <div style={{ marginTop: '16px' }}>
+            <Button
+              onClick={() => {
+                ;(window as any).api?.toggleDevTools()
               }}
             >
-              <div>secscore://settings</div>
-              <div>secscore://score</div>
-              <div>secscore://sidebar/toggle</div>
-            </div>
-            <Divider />
-            <Space>
-              <Button
-                theme="primary"
-                loading={urlRegisterLoading}
-                disabled={!canAdmin}
-                onClick={async () => {
-                  if (!(window as any).api) return
-                  setUrlRegisterLoading(true)
-                  const res = await (window as any).api.registerUrlProtocol()
-                  setUrlRegisterLoading(false)
-                  if (res && res.success) {
-                    MessagePlugin.success('URL 协议已注册')
-                  } else {
-                    MessagePlugin.error(res?.message || '注册失败')
-                  }
-                }}
-              >
-                注册 URL 协议
-              </Button>
-            </Space>
-            <div
-              style={{
-                marginTop: '8px',
-                fontSize: '12px',
-                color: 'var(--ss-text-secondary)'
-              }}
-            >
-              需要安装版 SecScore，开发模式下可能无效。
-            </div>
-          </Card>
-        </Tabs.TabPanel>
+              切换开发者工具
+            </Button>
+          </div>
+        </Card>
+      )
+    }
+  ]
 
-        <Tabs.TabPanel value="about" label="关于">
-          <Card style={{ backgroundColor: 'var(--ss-card-bg)', color: 'var(--ss-text-main)' }}>
-            <div style={{ fontSize: '16px', fontWeight: 700, marginBottom: '8px' }}>SecScore</div>
-            <div style={{ color: 'var(--ss-text-secondary)', marginBottom: '16px' }}>
-              教育积分管理
-            </div>
-            <Divider />
-            <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr', rowGap: '10px' }}>
-              <div style={{ color: 'var(--ss-text-secondary)' }}>版本</div>
-              <div>v1.0.0</div>
-              <div style={{ color: 'var(--ss-text-secondary)' }}>版权</div>
-              <div>{'SecScore遵循GPL3.0协议——' + 'CopyRight © 2025-' + currentYear + ' SECTL'}</div>
-              <div style={{ color: 'var(--ss-text-secondary)' }}>Electron</div>
-              <div>{(window as any).electron?.process?.versions?.electron || '-'}</div>
-              <div style={{ color: 'var(--ss-text-secondary)' }}>Chromium</div>
-              <div>{(window as any).electron?.process?.versions?.chrome || '-'}</div>
-              <div style={{ color: 'var(--ss-text-secondary)' }}>Node</div>
-              <div>{(window as any).electron?.process?.versions?.node || '-'}</div>
-              <div style={{ color: 'var(--ss-text-secondary)' }}>IPC 状态</div>
-              <div>
-                <Tag
-                  theme={(window as any).api ? 'success' : 'danger'}
-                  variant="light"
-                  size="small"
-                >
-                  {(window as any).api ? '已连接' : '未连接 (Preload 失败)'}
-                </Tag>
-              </div>
-              <div style={{ color: 'var(--ss-text-secondary)' }}>环境</div>
-              <div>
-                <Tag variant="outline" size="small">
-                  {import.meta.env.DEV ? 'Development' : 'Production'}
-                </Tag>
-              </div>
-            </div>
-            <Divider />
-            <div style={{ marginTop: '16px' }}>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  ;(window as any).api?.toggleDevTools()
-                }}
-              >
-                切换开发者工具
-              </Button>
-            </div>
-          </Card>
-        </Tabs.TabPanel>
-      </Tabs>
+  return (
+    <div style={{ padding: '24px', maxWidth: '900px', margin: '0 auto' }}>
+      {contextHolder}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '16px'
+        }}
+      >
+        <h2 style={{ margin: 0, color: 'var(--ss-text-main)' }}>系统设置</h2>
+        {permissionTag}
+      </div>
 
-      <Dialog
-        header={recoveryDialogHeader}
-        visible={recoveryDialogVisible}
+      <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabItems} />
+
+      <Modal
+        title={recoveryDialogHeader}
+        open={recoveryDialogVisible}
+        onCancel={() => setRecoveryDialogVisible(false)}
+        footer={
+          <Button type="primary" onClick={() => setRecoveryDialogVisible(false)}>
+            我已保存
+          </Button>
+        }
         width="70%"
-        cancelBtn={null}
-        confirmBtn="我已保存"
-        onClose={() => setRecoveryDialogVisible(false)}
-        onConfirm={() => setRecoveryDialogVisible(false)}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div
@@ -673,7 +806,7 @@ export const Settings: React.FC<{ permission: permissionLevel }> = ({ permission
           </div>
           <Space>
             <Button
-              theme="primary"
+              type="primary"
               onClick={() =>
                 downloadTextFile(
                   recoveryDialogFilename ||
@@ -689,16 +822,14 @@ export const Settings: React.FC<{ permission: permissionLevel }> = ({ permission
             建议导出后离线保存，遗失将无法找回。
           </div>
         </div>
-      </Dialog>
+      </Modal>
 
-      <Dialog
-        header="系统日志 (最后200条)"
-        visible={logsDialogVisible}
+      <Modal
+        title="系统日志 (最后200条)"
+        open={logsDialogVisible}
+        onCancel={() => setLogsDialogVisible(false)}
+        footer={<Button onClick={() => setLogsDialogVisible(false)}>关闭</Button>}
         width="80%"
-        cancelBtn={null}
-        confirmBtn="关闭"
-        onClose={() => setLogsDialogVisible(false)}
-        onConfirm={() => setLogsDialogVisible(false)}
       >
         <div
           style={{
@@ -715,56 +846,47 @@ export const Settings: React.FC<{ permission: permissionLevel }> = ({ permission
         >
           {logsText || '暂无日志'}
         </div>
-      </Dialog>
+      </Modal>
 
-      <Dialog
-        header="确认结算并重新开始？"
-        visible={settleDialogVisible}
-        confirmBtn="结算"
-        confirmLoading={settleLoading}
-        onClose={() => {
-          if (!settleLoading) setSettleDialogVisible(false)
-        }}
-        onCancel={() => {
-          if (!settleLoading) setSettleDialogVisible(false)
-        }}
-        onConfirm={async () => {
+      <Modal
+        title="确认结算并重新开始？"
+        open={settleDialogVisible}
+        onCancel={() => !settleLoading && setSettleDialogVisible(false)}
+        onOk={async () => {
           if (!(window as any).api) return
           setSettleLoading(true)
           const res = await (window as any).api.createSettlement()
           setSettleLoading(false)
           if (res.success && res.data) {
-            MessagePlugin.success('结算成功，已重新开始积分')
+            messageApi.success('结算成功，已重新开始积分')
             emitDataUpdated('all')
             setSettleDialogVisible(false)
           } else {
-            MessagePlugin.error(res.message || '结算失败')
+            messageApi.error(res.message || '结算失败')
           }
         }}
+        confirmLoading={settleLoading}
+        okText="结算"
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <div>将把当前未结算的积分记录归档为一个阶段，并将所有学生当前积分清零。</div>
           <div style={{ color: 'var(--ss-text-secondary)', fontSize: '12px' }}>
-            学生名单不变；结算后的历史在“结算历史”页面查看。
+            学生名单不变；结算后的历史在"结算历史"页面查看。
           </div>
         </div>
-      </Dialog>
+      </Modal>
 
-      <Dialog
-        header="确认清空所有密码？"
-        visible={clearDialogVisible}
-        confirmBtn="确认清空"
+      <Modal
+        title="确认清空所有密码？"
+        open={clearDialogVisible}
+        onCancel={() => !clearLoading && setClearDialogVisible(false)}
+        onOk={handleConfirmClearAll}
         confirmLoading={clearLoading}
-        onClose={() => {
-          if (!clearLoading) setClearDialogVisible(false)
-        }}
-        onCancel={() => {
-          if (!clearLoading) setClearDialogVisible(false)
-        }}
-        onConfirm={handleConfirmClearAll}
+        okText="确认清空"
+        okButtonProps={{ danger: true }}
       >
         清空后将关闭保护（无密码时默认视为管理权限）。
-      </Dialog>
+      </Modal>
     </div>
   )
 }

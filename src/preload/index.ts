@@ -113,6 +113,14 @@ const api = {
 
   registerUrlProtocol: () => ipcRenderer.invoke('app:register-url-protocol'),
 
+  // Database Connection
+  dbTestConnection: (connectionString: string) =>
+    ipcRenderer.invoke('db:testConnection', connectionString),
+  dbSwitchConnection: (connectionString: string) =>
+    ipcRenderer.invoke('db:switchConnection', connectionString),
+  dbGetStatus: () => ipcRenderer.invoke('db:getStatus'),
+  dbSync: () => ipcRenderer.invoke('db:sync'),
+
   // HTTP Server
   httpServerStart: (config?: { port?: number; host?: string; corsOrigin?: string }) =>
     ipcRenderer.invoke('http:server:start', config),

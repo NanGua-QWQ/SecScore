@@ -3,6 +3,10 @@ import { MainContext } from '../context'
 import { IsNull } from 'typeorm'
 import { ScoreEventEntity, SettlementEntity, StudentEntity } from '../db/entities'
 
+function isPostgres(ds: any): boolean {
+  return ds.options?.type === 'postgres'
+}
+
 export interface settlementSummary {
   id: number
   start_time: string
@@ -64,7 +68,9 @@ export class SettlementRepository extends Service {
   }
 
   async findAll(): Promise<settlementSummary[]> {
-    const qb = this.ctx.db.dataSource
+    const ds = this.ctx.db.dataSource
+    const orderBy = isPostgres(ds) ? 's.end_time' : 'julianday(s.end_time)'
+    const qb = ds
       .getRepository(SettlementEntity)
       .createQueryBuilder('s')
       .select('s.id', 'id')
@@ -76,7 +82,7 @@ export class SettlementRepository extends Service {
           .from(ScoreEventEntity, 'e')
           .where('e.settlement_id = s.id')
       }, 'event_count')
-      .orderBy('julianday(s.end_time)', 'DESC')
+      .orderBy(orderBy, 'DESC')
 
     const rows = await qb.getRawMany()
     return rows.map((r: any) => ({
@@ -100,10 +106,12 @@ export class SettlementRepository extends Service {
       const endTime = new Date().toISOString()
 
       const settlementsRepo = manager.getRepository(SettlementEntity)
+      const ds = this.ctx.db.dataSource
+      const orderBy = isPostgres(ds) ? 's.end_time' : 'julianday(s.end_time)'
       const lastSettlement = await settlementsRepo
         .createQueryBuilder('s')
         .select('s.end_time', 'end_time')
-        .orderBy('julianday(s.end_time)', 'DESC')
+        .orderBy(orderBy, 'DESC')
         .limit(1)
         .getRawOne<{ end_time?: string }>()
 

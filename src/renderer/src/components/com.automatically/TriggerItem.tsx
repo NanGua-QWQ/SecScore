@@ -1,5 +1,5 @@
-import { Button, Select } from 'tdesign-react'
-import { Delete1Icon } from 'tdesign-icons-react'
+import { Button, Select } from 'antd'
+import { DeleteOutlined } from '@ant-design/icons'
 import { triggerRegistry, allTriggers } from './registry'
 import type { TriggerItem as TriggerItemType } from './types'
 
@@ -25,25 +25,20 @@ const TriggerItem: React.FC<TriggerItemProps> = ({
   const relation = item.relation || 'AND'
 
   return (
-    <div style={{ display: 'flex', gap: 5 }}>
+    <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
       {!isFirst && (
         <Button
-          theme={relation === 'AND' ? 'primary' : 'warning'}
-          variant={relation === 'AND' ? 'base' : 'outline'}
+          type={relation === 'AND' ? 'primary' : 'default'}
+          danger={relation === 'OR'}
           onClick={() => onRelationChange?.(item.id, relation === 'AND' ? 'OR' : 'AND')}
         >
           {relation === 'AND' ? '并' : '或'}
         </Button>
       )}
-      <Button
-        theme="default"
-        variant="text"
-        icon={<Delete1Icon strokeWidth={2.4} />}
-        onClick={() => onDelete(item.id)}
-      />
+      <Button type="text" danger icon={<DeleteOutlined />} onClick={() => onDelete(item.id)} />
       <Select
         value={item.eventName}
-        style={{ width: '200px', marginRight: 12 }}
+        style={{ width: '200px' }}
         options={allTriggers.options}
         placeholder="请选择触发规则"
         onChange={(value) => onChange(item.id, value as string)}

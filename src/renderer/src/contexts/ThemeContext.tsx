@@ -23,31 +23,49 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     for (const k of prevKeys) root.style.removeProperty(k)
     const nextKeys: string[] = []
 
-    // 1. 设置 TDesign 亮/暗模式
     root.setAttribute('theme-mode', theme.mode)
 
-    // 2. 设置 TDesign 品牌色
     if (tdesign.brandColor) {
       const colorMap = generateColorMap(tdesign.brandColor, theme.mode)
       Object.entries(colorMap).forEach(([key, value]) => {
         root.style.setProperty(key, value)
         nextKeys.push(key)
       })
-    }
-    if (tdesign.warningColor) {
-      root.style.setProperty('--td-warning-color', tdesign.warningColor)
-      nextKeys.push('--td-warning-color')
-    }
-    if (tdesign.errorColor) {
-      root.style.setProperty('--td-error-color', tdesign.errorColor)
-      nextKeys.push('--td-error-color')
-    }
-    if (tdesign.successColor) {
-      root.style.setProperty('--td-success-color', tdesign.successColor)
-      nextKeys.push('--td-success-color')
+
+      root.style.setProperty('--ant-color-primary', tdesign.brandColor)
+      nextKeys.push('--ant-color-primary')
+
+      const hex = tdesign.brandColor.replace('#', '')
+      const r = parseInt(hex.substring(0, 2), 16)
+      const g = parseInt(hex.substring(2, 4), 16)
+      const b = parseInt(hex.substring(4, 6), 16)
+
+      root.style.setProperty('--ant-color-primary-hover', `rgba(${r}, ${g}, ${b}, 0.85)`)
+      root.style.setProperty('--ant-color-primary-active', `rgba(${r}, ${g}, ${b}, 0.7)`)
+      root.style.setProperty('--ant-color-primary-bg', `rgba(${r}, ${g}, ${b}, 0.1)`)
+      root.style.setProperty('--ant-color-primary-bg-hover', `rgba(${r}, ${g}, ${b}, 0.2)`)
+      root.style.setProperty('--ant-color-primary-border', `rgba(${r}, ${g}, ${b}, 0.3)`)
+
+      nextKeys.push('--ant-color-primary-hover')
+      nextKeys.push('--ant-color-primary-active')
+      nextKeys.push('--ant-color-primary-bg')
+      nextKeys.push('--ant-color-primary-bg-hover')
+      nextKeys.push('--ant-color-primary-border')
     }
 
-    // 3. 应用自定义 CSS 变量 (用于业务 UI)
+    if (tdesign.warningColor) {
+      root.style.setProperty('--ant-color-warning', tdesign.warningColor)
+      nextKeys.push('--ant-color-warning')
+    }
+    if (tdesign.errorColor) {
+      root.style.setProperty('--ant-color-error', tdesign.errorColor)
+      nextKeys.push('--ant-color-error')
+    }
+    if (tdesign.successColor) {
+      root.style.setProperty('--ant-color-success', tdesign.successColor)
+      nextKeys.push('--ant-color-success')
+    }
+
     Object.entries(custom).forEach(([key, value]) => {
       root.style.setProperty(key, value)
       nextKeys.push(key)
@@ -85,7 +103,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setCurrentTheme(theme)
       currentThemeRef.current = theme
       applyThemeConfig(theme)
-      loadThemes() // Refresh list in case of new files
+      loadThemes()
     })
 
     return () => {

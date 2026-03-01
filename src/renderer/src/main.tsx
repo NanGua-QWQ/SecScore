@@ -2,7 +2,6 @@ import './assets/main.css'
 
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import 'tdesign-react/es/_util/react-19-adapter'
 import App from './App'
 import { ClientContext } from './ClientContext'
 import { StudentService } from './services/StudentService'

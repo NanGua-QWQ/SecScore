@@ -6,16 +6,15 @@ import {
   Input,
   InputNumber,
   Button,
-  MessagePlugin,
+  message,
   Card,
-  Collapse,
   Table,
-  PrimaryTableCol,
   Tag,
   Space,
   Popconfirm
-} from 'tdesign-react'
-import { RollbackIcon } from 'tdesign-icons-react'
+} from 'antd'
+import type { ColumnsType } from 'antd/es/table'
+import { UndoOutlined } from '@ant-design/icons'
 import { match } from 'pinyin-pro'
 
 const normalizeSearch = (input: unknown) =>
@@ -86,6 +85,7 @@ export const ScoreManager: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
   const [loading, setLoading] = useState(false)
   const [submitLoading, setSubmitLoading] = useState(false)
   const [form] = Form.useForm()
+  const [messageApi, contextHolder] = message.useMessage()
 
   const emitDataUpdated = (category: 'events' | 'students' | 'reasons' | 'all') => {
     window.dispatchEvent(new CustomEvent('ss:data-updated', { detail: { category } }))
@@ -93,7 +93,6 @@ export const ScoreManager: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
 
   const fetchData = useCallback(async () => {
     if (!(window as any).api) return
-    // 使用 setTimeout 避免 UI 阻塞
     setTimeout(async () => {
       setLoading(true)
       try {
@@ -134,17 +133,16 @@ export const ScoreManager: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
   const handleSubmit = async () => {
     if (!(window as any).api) return
     if (!canEdit) {
-      MessagePlugin.error('当前为只读权限')
+      messageApi.error('当前为只读权限')
       return
     }
     const values = form.getFieldsValue(true) as any
 
-    // 支持多选学生
     const studentNames = Array.isArray(values.student_name)
       ? values.student_name
       : [values.student_name]
     if (!studentNames || studentNames.length === 0 || !values.reason_content) {
-      MessagePlugin.warning('请填写完整信息')
+      messageApi.warning('请填写完整信息')
       return
     }
 
@@ -155,7 +153,7 @@ export const ScoreManager: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
     const selectedReason = Number.isFinite(reasonId) ? reasons.find((r) => r.id === reasonId) : null
 
     if (!hasDeltaInput && !selectedReason) {
-      MessagePlugin.warning('请填写分值或选择预设理由')
+      messageApi.warning('请填写分值或选择预设理由')
       return
     }
 
@@ -166,7 +164,6 @@ export const ScoreManager: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
         : Math.abs(deltaInput)
       : Number(selectedReason?.delta ?? 0)
 
-    // 为每个选中的学生创建事件
     try {
       let successCount = 0
       for (const studentName of studentNames) {
@@ -181,7 +178,7 @@ export const ScoreManager: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
       }
 
       if (successCount === studentNames.length) {
-        MessagePlugin.success(`已为 ${successCount} 名学生提交积分`)
+        messageApi.success(`已为 ${successCount} 名学生提交积分`)
         form.setFieldsValue({
           student_name: [],
           delta: undefined,
@@ -192,7 +189,7 @@ export const ScoreManager: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
         fetchData()
         emitDataUpdated('events')
       } else {
-        MessagePlugin.warning(`成功提交 ${successCount}/${studentNames.length} 名学生的积分`)
+        messageApi.warning(`成功提交 ${successCount}/${studentNames.length} 名学生的积分`)
         fetchData()
         emitDataUpdated('events')
       }
@@ -204,48 +201,48 @@ export const ScoreManager: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
   const handleUndo = async (uuid: string) => {
     if (!(window as any).api) return
     if (!canEdit) {
-      MessagePlugin.error('当前为只读权限')
+      messageApi.error('当前为只读权限')
       return
     }
     const res = await (window as any).api.deleteEvent(uuid)
     if (res.success) {
-      MessagePlugin.success('已撤销操作')
+      messageApi.success('已撤销操作')
       fetchData()
       emitDataUpdated('events')
     } else {
-      MessagePlugin.error(res.message || '撤销失败')
+      messageApi.error(res.message || '撤销失败')
     }
   }
 
-  const columns: PrimaryTableCol<scoreEvent>[] = [
-    { colKey: 'student_name', title: '学生', width: 100 },
+  const columns: ColumnsType<scoreEvent> = [
+    { title: '学生', dataIndex: 'student_name', key: 'student_name', width: 100 },
     {
-      colKey: 'delta',
       title: '变动',
+      dataIndex: 'delta',
+      key: 'delta',
       width: 80,
-      cell: ({ row }) => (
-        <Tag theme={row.delta > 0 ? 'success' : 'danger'} variant="light">
-          {row.delta > 0 ? `+${row.delta}` : row.delta}
-        </Tag>
+      render: (delta: number) => (
+        <Tag color={delta > 0 ? 'success' : 'error'}>{delta > 0 ? `+${delta}` : delta}</Tag>
       )
     },
-    { colKey: 'reason_content', title: '理由', ellipsis: true },
+    { title: '理由', dataIndex: 'reason_content', key: 'reason_content', ellipsis: true },
     {
-      colKey: 'event_time',
       title: '时间',
+      dataIndex: 'event_time',
+      key: 'event_time',
       width: 160,
-      cell: ({ row }) => new Date(row.event_time).toLocaleString()
+      render: (time: string) => new Date(time).toLocaleString()
     },
     {
-      colKey: 'operation',
       title: '操作',
+      key: 'operation',
       width: 80,
-      cell: ({ row }) => (
+      render: (_, row) => (
         <Popconfirm
-          content="确定要撤销这条记录吗？学生积分将回滚。"
+          title="确定要撤销这条记录吗？学生积分将回滚。"
           onConfirm={() => handleUndo(row.uuid)}
         >
-          <Button variant="text" theme="warning" disabled={!canEdit} icon={<RollbackIcon />}>
+          <Button type="link" danger disabled={!canEdit} icon={<UndoOutlined />}>
             撤销
           </Button>
         </Popconfirm>
@@ -255,43 +252,37 @@ export const ScoreManager: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
 
   return (
     <div style={{ padding: '24px' }}>
+      {contextHolder}
       <h2 style={{ marginBottom: '24px', color: 'var(--ss-text-main)' }}>积分管理</h2>
 
       <Card style={{ marginBottom: '24px', backgroundColor: 'var(--ss-card-bg)' }}>
-        <Form
-          form={form}
-          labelWidth={80}
-          initialData={{ type: 'add' }}
-          onReset={() => form.setFieldsValue({ type: 'add' })}
-        >
+        <Form form={form} layout="vertical" initialValues={{ type: 'add' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-            <Form.FormItem label="姓名" name="student_name">
+            <Form.Item label="姓名" name="student_name">
               <Select
-                filterable
-                multiple
+                mode="multiple"
+                showSearch
                 placeholder="请选择或搜索学生"
-                filter={(filterWords, option) =>
-                  matchStudentName(getOptionLabel(option), filterWords)
-                }
+                filterOption={(input, option) => matchStudentName(getOptionLabel(option), input)}
                 options={students.map((s) => ({ label: s.name, value: s.name }))}
               />
-            </Form.FormItem>
+            </Form.Item>
 
-            <Form.FormItem label="分数">
+            <Form.Item label="分数">
               <Space>
-                <Form.FormItem name="type" style={{ marginBottom: 0 }}>
-                  <Radio.Group variant="default-filled">
+                <Form.Item name="type" noStyle>
+                  <Radio.Group optionType="button" buttonStyle="solid">
                     <Radio.Button value="add">加分</Radio.Button>
                     <Radio.Button value="subtract">扣分</Radio.Button>
                   </Radio.Group>
-                </Form.FormItem>
-                <Form.FormItem name="delta" style={{ marginBottom: 0 }}>
+                </Form.Item>
+                <Form.Item name="delta" noStyle>
                   <InputNumber min={1} placeholder="分值" style={{ width: '120px' }} />
-                </Form.FormItem>
+                </Form.Item>
               </Space>
-            </Form.FormItem>
+            </Form.Item>
 
-            <Form.FormItem label="快捷理由" name="reason_id">
+            <Form.Item label="快捷理由" name="reason_id">
               <Select
                 placeholder="选择预设理由"
                 onChange={(v) => {
@@ -317,23 +308,21 @@ export const ScoreManager: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
                     type: reason.delta > 0 ? 'add' : 'subtract'
                   })
                 }}
-              >
-                {reasons.map((r) => (
-                  <Select.Option key={r.id} value={r.id} label={r.content}>
-                    {r.content} ({r.delta > 0 ? `+${r.delta}` : r.delta})
-                  </Select.Option>
-                ))}
-              </Select>
-            </Form.FormItem>
+                options={reasons.map((r) => ({
+                  label: `${r.content} (${r.delta > 0 ? `+${r.delta}` : r.delta})`,
+                  value: r.id
+                }))}
+              />
+            </Form.Item>
 
-            <Form.FormItem label="理由内容" name="reason_content">
+            <Form.Item label="理由内容" name="reason_content">
               <Input placeholder="手动输入或选择快捷理由" />
-            </Form.FormItem>
+            </Form.Item>
           </div>
 
           <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'center' }}>
             <Button
-              theme="primary"
+              type="primary"
               size="large"
               disabled={!canEdit}
               onClick={handleSubmit}
@@ -347,20 +336,16 @@ export const ScoreManager: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
       </Card>
 
       <Card style={{ backgroundColor: 'var(--ss-card-bg)' }}>
-        <Collapse defaultValue={[]} expandMutex>
-          <Collapse.Panel header="最近记录" value="recent">
-            <Table
-              data={events}
-              columns={columns}
-              rowKey="uuid"
-              loading={loading}
-              size="small"
-              pagination={{ pageSize: 5, total: events.length, defaultCurrent: 1 }}
-              scroll={{ type: 'virtual' }}
-              style={{ color: 'var(--ss-text-main)' }}
-            />
-          </Collapse.Panel>
-        </Collapse>
+        <div style={{ fontWeight: 600, marginBottom: 16 }}>最近记录</div>
+        <Table
+          dataSource={events}
+          columns={columns}
+          rowKey="uuid"
+          loading={loading}
+          size="small"
+          pagination={{ pageSize: 5, total: events.length, defaultCurrent: 1 }}
+          style={{ color: 'var(--ss-text-main)' }}
+        />
       </Card>
     </div>
   )

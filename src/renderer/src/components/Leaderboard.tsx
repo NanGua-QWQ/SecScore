@@ -1,16 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import {
-  Table,
-  PrimaryTableCol,
-  Tag,
-  Button,
-  Select,
-  Space,
-  Card,
-  MessagePlugin,
-  Dialog
-} from 'tdesign-react'
-import { ViewListIcon, DownloadIcon } from 'tdesign-icons-react'
+import { Table, Tag, Button, Select, Space, Card, message, Modal } from 'antd'
+import type { ColumnsType } from 'antd/es/table'
+import { EyeOutlined, DownloadOutlined } from '@ant-design/icons'
 import * as XLSX from 'xlsx'
 
 interface studentRank {
@@ -28,6 +19,7 @@ export const Leaderboard: React.FC = () => {
   const [historyVisible, setHistoryVisible] = useState(false)
   const [historyHeader, setHistoryHeader] = useState('')
   const [historyText, setHistoryText] = useState('')
+  const [messageApi, contextHolder] = message.useMessage()
 
   const fetchRankings = useCallback(async () => {
     if (!(window as any).api) return
@@ -66,7 +58,7 @@ export const Leaderboard: React.FC = () => {
       startTime
     })
     if (!res.success) {
-      MessagePlugin.error(res.message || '查询失败')
+      messageApi.error(res.message || '查询失败')
       return
     }
 
@@ -82,7 +74,6 @@ export const Leaderboard: React.FC = () => {
   }
 
   const handleExport = () => {
-    // 使用 requestIdleCallback 或 setTimeout 避免阻塞 UI
     setTimeout(() => {
       const title = timeRange === 'today' ? '今天' : timeRange === 'week' ? '本周' : '本月'
 
@@ -125,18 +116,18 @@ export const Leaderboard: React.FC = () => {
       link.click()
       document.body.removeChild(link)
       URL.revokeObjectURL(url)
-      MessagePlugin.success('导出成功')
+      messageApi.success('导出成功')
     }, 0)
   }
 
-  const columns: PrimaryTableCol<studentRank>[] = [
+  const columns: ColumnsType<studentRank> = [
     {
-      colKey: 'rank',
       title: '排名',
+      key: 'rank',
       width: 70,
       align: 'center',
-      cell: ({ rowIndex }) => {
-        const rank = rowIndex + 1
+      render: (_, __, index) => {
+        const rank = index + 1
         let color = 'inherit'
         if (rank === 1) color = '#FFD700'
         if (rank === 2) color = '#C0C0C0'
@@ -148,40 +139,34 @@ export const Leaderboard: React.FC = () => {
         )
       }
     },
-    { colKey: 'name', title: '姓名', width: 120, align: 'center' },
+    { title: '姓名', dataIndex: 'name', key: 'name', width: 120, align: 'center' },
     {
-      colKey: 'score',
       title: '总积分',
+      dataIndex: 'score',
+      key: 'score',
       width: 100,
       align: 'center',
-      cell: ({ row }) => <span style={{ fontWeight: 'bold' }}>{row.score}</span>
+      render: (score: number) => <span style={{ fontWeight: 'bold' }}>{score}</span>
     },
     {
-      colKey: 'range_change',
       title: timeRange === 'today' ? '今日变化' : timeRange === 'week' ? '本周变化' : '本月变化',
+      dataIndex: 'range_change',
+      key: 'range_change',
       width: 100,
       align: 'center',
-      cell: ({ row }) => (
-        <Tag
-          theme={row.range_change > 0 ? 'success' : row.range_change < 0 ? 'danger' : 'default'}
-          variant="light"
-        >
-          {row.range_change > 0 ? `+${row.range_change}` : row.range_change}
+      render: (change: number) => (
+        <Tag color={change > 0 ? 'success' : change < 0 ? 'error' : 'default'}>
+          {change > 0 ? `+${change}` : change}
         </Tag>
       )
     },
     {
-      colKey: 'operation',
       title: '操作记录',
+      key: 'operation',
       width: 100,
       align: 'center',
-      cell: ({ row }) => (
-        <Button
-          variant="text"
-          theme="primary"
-          icon={<ViewListIcon />}
-          onClick={() => handleViewHistory(row.name)}
-        >
+      render: (_, row) => (
+        <Button type="link" icon={<EyeOutlined />} onClick={() => handleViewHistory(row.name)}>
           查看
         </Button>
       )
@@ -190,6 +175,7 @@ export const Leaderboard: React.FC = () => {
 
   return (
     <div style={{ padding: '24px' }}>
+      {contextHolder}
       <div
         style={{
           marginBottom: '24px',
@@ -202,14 +188,15 @@ export const Leaderboard: React.FC = () => {
         <Space>
           <Select
             value={timeRange}
-            onChange={(v) => setTimeRange(v as string)}
+            onChange={(v) => setTimeRange(v)}
             style={{ width: '120px' }}
-          >
-            <Select.Option value="today" label="今天" />
-            <Select.Option value="week" label="本周" />
-            <Select.Option value="month" label="本月" />
-          </Select>
-          <Button variant="outline" icon={<DownloadIcon />} onClick={handleExport}>
+            options={[
+              { value: 'today', label: '今天' },
+              { value: 'week', label: '本周' },
+              { value: 'month', label: '本月' }
+            ]}
+          />
+          <Button icon={<DownloadOutlined />} onClick={handleExport}>
             导出 XLSX
           </Button>
         </Space>
@@ -217,27 +204,22 @@ export const Leaderboard: React.FC = () => {
 
       <Card style={{ backgroundColor: 'var(--ss-card-bg)' }}>
         <Table
-          data={data}
+          dataSource={data}
           columns={columns}
           rowKey="id"
           loading={loading}
           bordered
-          hover
           pagination={{ pageSize: 30, total: data.length, defaultCurrent: 1 }}
-          scroll={{ type: 'virtual', rowHeight: 48, threshold: 100 }}
-          className="ss-table-center"
           style={{ color: 'var(--ss-text-main)' }}
         />
       </Card>
 
-      <Dialog
-        header={historyHeader}
-        visible={historyVisible}
+      <Modal
+        title={historyHeader}
+        open={historyVisible}
+        onCancel={() => setHistoryVisible(false)}
+        footer={<Button onClick={() => setHistoryVisible(false)}>关闭</Button>}
         width="80%"
-        cancelBtn={null}
-        confirmBtn="关闭"
-        onClose={() => setHistoryVisible(false)}
-        onConfirm={() => setHistoryVisible(false)}
       >
         <div
           style={{
@@ -254,7 +236,7 @@ export const Leaderboard: React.FC = () => {
         >
           {historyText}
         </div>
-      </Dialog>
+      </Modal>
     </div>
   )
 }

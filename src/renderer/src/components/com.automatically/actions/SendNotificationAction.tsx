@@ -1,4 +1,4 @@
-import { Input } from 'tdesign-react'
+import { Input } from 'antd'
 import type { ActionComponentProps } from '../types'
 
 export const eventName = 'send_notification'
@@ -12,7 +12,7 @@ const SendNotificationAction: React.FC<ActionComponentProps> = ({ value, onChang
       placeholder="请输入通知内容"
       style={{ width: '150px' }}
       value={value ?? ''}
-      onChange={(v: any) => onChange(v ? String(v) : '')}
+      onChange={(e) => onChange(e.target.value ? String(e.target.value) : '')}
     />
   )
 }

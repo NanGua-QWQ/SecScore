@@ -1,4 +1,4 @@
-import { Input } from 'tdesign-react'
+import { Input } from 'antd'
 import type { ActionComponentProps } from '../types'
 
 export const eventName = 'add_tag'
@@ -12,7 +12,7 @@ const AddTagAction: React.FC<ActionComponentProps> = ({ value, onChange }) => {
       placeholder="请输入标签"
       style={{ width: '150px' }}
       value={value ?? ''}
-      onChange={(v: any) => onChange(v ? String(v) : '')}
+      onChange={(e) => onChange(e.target.value ? String(e.target.value) : '')}
     />
   )
 }

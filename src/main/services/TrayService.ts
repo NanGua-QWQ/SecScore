@@ -30,6 +30,13 @@ export class TrayService extends Service {
       },
       { type: 'separator' },
       {
+        label: '重启应用',
+        click: () => {
+          this.restartApp()
+        }
+      },
+      { type: 'separator' },
+      {
         label: '关闭应用',
         click: () => {
           app.quit()
@@ -54,5 +61,10 @@ export class TrayService extends Service {
     } else {
       this.mainCtx.windows.open({ key: 'main', title: 'SecScore', route: '/' })
     }
+  }
+
+  private restartApp() {
+    app.relaunch()
+    app.quit()
   }
 }

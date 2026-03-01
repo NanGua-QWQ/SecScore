@@ -32,6 +32,8 @@ export type settingsSpec = {
   auto_score_enabled: boolean
   auto_score_rules: any[]
   current_theme_id: string
+  pg_connection_string: string
+  pg_connection_status: { connected: boolean; type: 'sqlite' | 'postgresql'; error?: string }
 }
 
 export type settingsKey = keyof settingsSpec
@@ -175,6 +177,18 @@ export interface electronApi {
   }) => Promise<ipcResponse<void>>
 
   registerUrlProtocol: () => Promise<ipcResponse<{ registered?: boolean }>>
+
+  // Database Connection
+  dbTestConnection: (
+    connectionString: string
+  ) => Promise<ipcResponse<{ success: boolean; error?: string }>>
+  dbSwitchConnection: (
+    connectionString: string
+  ) => Promise<ipcResponse<{ type: 'sqlite' | 'postgresql' }>>
+  dbGetStatus: () => Promise<
+    ipcResponse<{ type: 'sqlite' | 'postgresql'; connected: boolean; error?: string }>
+  >
+  dbSync: () => Promise<ipcResponse<{ success: boolean; message?: string }>>
 
   // HTTP Server
   httpServerStart: (config?: {

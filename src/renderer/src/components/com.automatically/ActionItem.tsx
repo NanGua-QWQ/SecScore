@@ -1,5 +1,5 @@
-import { Button, Select } from 'tdesign-react'
-import { Delete1Icon } from 'tdesign-icons-react'
+import { Button, Select } from 'antd'
+import { DeleteOutlined } from '@ant-design/icons'
 import { actionRegistry, allActions } from './registry'
 import type { ActionItem as ActionItemType } from './types'
 
@@ -23,15 +23,10 @@ const ActionItem: React.FC<ActionItemProps> = ({
 
   return (
     <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
-      <Button
-        theme="default"
-        variant="text"
-        icon={<Delete1Icon strokeWidth={2.4} />}
-        onClick={() => onDelete(item.id)}
-      />
+      <Button type="text" danger icon={<DeleteOutlined />} onClick={() => onDelete(item.id)} />
       <Select
         value={item.eventName}
-        style={{ width: '200px', marginRight: 12 }}
+        style={{ width: '200px' }}
         options={allActions.options}
         placeholder="请选择触发行动"
         onChange={(value) => onChange(item.id, value as string)}

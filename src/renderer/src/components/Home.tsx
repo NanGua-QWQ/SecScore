@@ -1,17 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import {
-  Card,
-  Space,
-  Button,
-  Tag,
-  Input,
-  Select,
-  Dialog,
-  MessagePlugin,
-  InputNumber,
-  Divider
-} from 'tdesign-react'
-import { SearchIcon, DeleteIcon } from 'tdesign-icons-react'
+import { Card, Space, Button, Tag, Input, Select, Modal, message, InputNumber, Divider } from 'antd'
+import { SearchOutlined, DeleteOutlined } from '@ant-design/icons'
 import { match, pinyin } from 'pinyin-pro'
 
 interface student {
@@ -38,34 +27,29 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
   const [sortType, setSortType] = useState<SortType>('alphabet')
   const [searchKeyword, setSearchKeyword] = useState('')
 
-  // 滚动容器引用
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const groupRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
-  // 操作框状态
   const [selectedStudent, setSelectedStudent] = useState<student | null>(null)
   const [operationVisible, setOperationVisible] = useState(false)
   const [customScore, setCustomScore] = useState<number | undefined>(undefined)
   const [reasonContent, setReasonContent] = useState('')
   const [submitLoading, setSubmitLoading] = useState(false)
+  const [messageApi, contextHolder] = message.useMessage()
 
   const emitDataUpdated = (category: 'events' | 'students' | 'reasons' | 'all') => {
     window.dispatchEvent(new CustomEvent('ss:data-updated', { detail: { category } }))
   }
 
-  // 获取姓氏
   const getSurname = (name: string) => {
     if (!name) return ''
     return name.charAt(0)
   }
 
-  // 获取拼音首字母
   const getFirstLetter = (name: string) => {
     if (!name) return ''
     const firstChar = name.charAt(0)
-    // 如果是英文字母
     if (/^[a-zA-Z]$/.test(firstChar)) return firstChar.toUpperCase()
-    // 如果是中文，转拼音
     const py = pinyin(firstChar, { pattern: 'first', toneType: 'none' })
     return py ? py.toUpperCase() : '#'
   }
@@ -102,13 +86,11 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
     return () => window.removeEventListener('ss:data-updated', onDataUpdated as any)
   }, [fetchData])
 
-  // 获取展示用的文字
   const getDisplayText = (name: string) => {
     if (!name) return ''
     return name.length > 2 ? name.substring(name.length - 2) : name
   }
 
-  // 拼音匹配
   const matchStudentName = useCallback((s: student, keyword: string) => {
     const q0 = keyword.trim().toLowerCase()
     if (!q0) return true
@@ -136,7 +118,6 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
     return false
   }, [])
 
-  // 过滤和排序学生
   const sortedStudents = useMemo(() => {
     const filtered = students.filter((s) => matchStudentName(s, searchKeyword))
 
@@ -163,7 +144,6 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
     }
   }, [students, searchKeyword, sortType, matchStudentName])
 
-  // 分组显示
   const groupedStudents = useMemo(() => {
     if (sortType === 'score' || (sortType === 'alphabet' && searchKeyword)) {
       return [{ key: 'all', students: sortedStudents }]
@@ -181,7 +161,6 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
       .map(([key, students]) => ({ key, students }))
   }, [sortedStudents, sortType, searchKeyword])
 
-  // 按分类分组的理由
   const groupedReasons = useMemo(() => {
     const groups: Record<string, reason[]> = {}
     reasons.forEach((r) => {
@@ -196,7 +175,6 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
     })
   }, [reasons])
 
-  // 生成头像颜色
   const getAvatarColor = (name: string) => {
     const colors = [
       '#FF6B6B',
@@ -218,7 +196,6 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
     return colors[index]
   }
 
-  // 跳转到指定分组
   const scrollToGroup = (key: string) => {
     const element = groupRefs.current[key]
     if (element) {
@@ -226,10 +203,9 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
     }
   }
 
-  // 打开操作框
   const openOperation = (student: student) => {
     if (!canEdit) {
-      MessagePlugin.error('当前为只读权限')
+      messageApi.error('当前为只读权限')
       return
     }
     setSelectedStudent(student)
@@ -238,11 +214,10 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
     setOperationVisible(true)
   }
 
-  // 核心提交逻辑
   const performSubmit = async (student: student, delta: number, content: string) => {
     if (!(window as any).api) return
     if (!canEdit) {
-      MessagePlugin.error('当前为只读权限')
+      messageApi.error('当前为只读权限')
       return
     }
 
@@ -254,29 +229,26 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
     })
 
     if (res.success) {
-      MessagePlugin.success(`已为 ${student.name} ${delta > 0 ? '加' : '扣'}${Math.abs(delta)}分`)
+      messageApi.success(`已为 ${student.name} ${delta > 0 ? '加' : '扣'}${Math.abs(delta)}分`)
       setOperationVisible(false)
 
-      // 【核心改进】本地增量更新分数，避免全量刷新导致的闪烁和滚动重置
       setStudents((prev) =>
         prev.map((s) => (s.id === student.id ? { ...s, score: s.score + delta } : s))
       )
 
-      // 通知其他组件数据已更新（但不在此处重复 fetchData）
       emitDataUpdated('events')
     } else {
-      MessagePlugin.error(res.message || '提交失败')
+      messageApi.error(res.message || '提交失败')
     }
     setSubmitLoading(false)
   }
 
-  // 手动点击确定按钮提交（用于自定义分值）
   const handleSubmit = async () => {
     if (!selectedStudent) return
 
     const delta = customScore
     if (delta === undefined || !Number.isFinite(delta)) {
-      MessagePlugin.warning('请选择或输入分值')
+      messageApi.warning('请选择或输入分值')
       return
     }
 
@@ -284,18 +256,15 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
     await performSubmit(selectedStudent, delta, content)
   }
 
-  // 快捷理由选择：点击即提交
   const handleReasonSelect = (reason: reason) => {
     if (!selectedStudent) return
     performSubmit(selectedStudent, reason.delta, reason.content)
   }
 
-  // 渲染学生卡片
   const renderStudentCard = (student: student, index: number) => {
     const avatarText = getDisplayText(student.name)
     const avatarColor = getAvatarColor(student.name)
 
-    // 排行榜勋章
     let rankBadge: string | null = null
     if (sortType === 'score' && !searchKeyword) {
       if (index === 0) rankBadge = '🥇'
@@ -316,6 +285,7 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
             border: '1px solid var(--ss-border-color)',
             overflow: 'visible'
           }}
+          styles={{ body: { padding: '12px' } }}
         >
           {rankBadge && (
             <div
@@ -364,9 +334,7 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
                 <Tag
-                  theme={student.score > 0 ? 'success' : student.score < 0 ? 'danger' : 'default'}
-                  variant="light-outline"
-                  size="small"
+                  color={student.score > 0 ? 'success' : student.score < 0 ? 'error' : 'default'}
                   style={{ fontWeight: 'bold' }}
                 >
                   {student.score > 0 ? `+${student.score}` : student.score}
@@ -379,7 +347,6 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
     )
   }
 
-  // 渲染分组学生卡片
   const renderGroupedCards = () => {
     return groupedStudents.map((group) => (
       <div
@@ -399,11 +366,11 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              borderLeft: '4px solid var(--td-brand-color)',
+              borderLeft: '4px solid var(--ant-color-primary, #1890ff)',
               paddingLeft: '12px'
             }}
           >
-            <span style={{ color: 'var(--td-brand-color)' }}>{group.key}</span>
+            <span style={{ color: 'var(--ant-color-primary, #1890ff)' }}>{group.key}</span>
             <span
               style={{ fontSize: '12px', color: 'var(--ss-text-secondary)', fontWeight: 'normal' }}
             >
@@ -424,7 +391,6 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
     ))
   }
 
-  // 快速导航滑动处理
   const navContainerRef = useRef<HTMLDivElement>(null)
   const isNavDragging = useRef(false)
 
@@ -437,7 +403,6 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
       const itemCount = items.length
       if (itemCount === 0) return
 
-      // 计算当前指向第几个项
       const itemHeight = rect.height / itemCount
       const index = Math.floor(y / itemHeight)
       const safeIndex = Math.max(0, Math.min(itemCount - 1, index))
@@ -469,7 +434,6 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
     document.removeEventListener('mouseup', onGlobalMouseUp)
   }
 
-  // 触摸事件处理
   const onNavTouchStart = (e: React.TouchEvent) => {
     isNavDragging.current = true
     if (e.touches[0]) {
@@ -480,7 +444,6 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
   const onNavTouchMove = (e: React.TouchEvent) => {
     if (isNavDragging.current && e.touches[0]) {
       handleNavAction(e.touches[0].clientY)
-      // 防止触摸滑动时触发页面滚动
       if (e.cancelable) e.preventDefault()
     }
   }
@@ -489,7 +452,6 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
     isNavDragging.current = false
   }
 
-  // 渲染快速导航
   const renderQuickNav = () => {
     if (
       groupedStudents.length <= 1 ||
@@ -521,7 +483,7 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
           border: '1px solid var(--ss-border-color)',
           cursor: 'pointer',
           userSelect: 'none',
-          touchAction: 'none' // 关键：禁用浏览器的默认触摸处理
+          touchAction: 'none'
         }}
       >
         {groupedStudents.map((group) => (
@@ -535,9 +497,9 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
               justifyContent: 'center',
               fontSize: '11px',
               fontWeight: 'bold',
-              color: 'var(--td-brand-color)',
+              color: 'var(--ant-color-primary, #1890ff)',
               borderRadius: '50%',
-              pointerEvents: 'none' // 让事件由父容器统一处理
+              pointerEvents: 'none'
             }}
           >
             {group.key}
@@ -549,7 +511,7 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
 
   return (
     <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto', position: 'relative' }}>
-      {/* 顶部工具栏 */}
+      {contextHolder}
       <div
         style={{
           marginBottom: '32px',
@@ -569,35 +531,31 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
           </p>
         </div>
 
-        <Space size="medium">
-          {/* 搜索 */}
+        <Space size="middle">
           <Input
             value={searchKeyword}
-            onChange={setSearchKeyword}
+            onChange={(e) => setSearchKeyword(e.target.value)}
             placeholder="搜索姓名/拼音..."
-            prefixIcon={<SearchIcon />}
-            clearable
+            prefix={<SearchOutlined />}
+            allowClear
             style={{ width: '220px' }}
           />
 
-          {/* 排序方式 */}
           <Select
             value={sortType}
             onChange={(v) => setSortType(v as SortType)}
             style={{ width: '140px' }}
-            autoWidth
-          >
-            <Select.Option value="alphabet" label="姓名排序" />
-            <Select.Option value="surname" label="姓氏分组" />
-            <Select.Option value="score" label="积分排行" />
-          </Select>
+            options={[
+              { value: 'alphabet', label: '姓名排序' },
+              { value: 'surname', label: '姓氏分组' },
+              { value: 'score', label: '积分排行' }
+            ]}
+          />
         </Space>
       </div>
 
-      {/* 快速导航 */}
       {renderQuickNav()}
 
-      {/* 学生卡片网格 */}
       <div style={{ minHeight: '400px' }} ref={scrollContainerRef}>
         {loading ? (
           <div style={{ textAlign: 'center', padding: '100px 0' }}>
@@ -617,12 +575,7 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
               {searchKeyword ? '未找到匹配的学生' : '暂无学生数据，请前往学生管理添加'}
             </div>
             {searchKeyword && (
-              <Button
-                variant="text"
-                theme="primary"
-                onClick={() => setSearchKeyword('')}
-                style={{ marginTop: '8px' }}
-              >
+              <Button type="link" onClick={() => setSearchKeyword('')} style={{ marginTop: '8px' }}>
                 清除搜索
               </Button>
             )}
@@ -632,20 +585,19 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
         )}
       </div>
 
-      {/* 操作框 */}
-      <Dialog
-        header={`积分操作：${selectedStudent?.name}`}
-        visible={operationVisible}
-        onClose={() => setOperationVisible(false)}
-        onConfirm={handleSubmit}
-        confirmBtn={{ content: '提交操作', loading: submitLoading }}
-        width="560px"
-        destroyOnClose
-        top="10%"
+      <Modal
+        title={`积分操作：${selectedStudent?.name}`}
+        open={operationVisible}
+        onCancel={() => setOperationVisible(false)}
+        onOk={handleSubmit}
+        confirmLoading={submitLoading}
+        okText="提交操作"
+        cancelText="取消"
+        width={560}
+        destroyOnHidden
       >
         {selectedStudent && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '8px 0' }}>
-            {/* 当前状态 */}
             <div
               style={{
                 display: 'flex',
@@ -680,14 +632,13 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
                   当前积分：
                 </span>
                 <Tag
-                  theme={
+                  color={
                     selectedStudent.score > 0
                       ? 'success'
                       : selectedStudent.score < 0
-                        ? 'danger'
+                        ? 'error'
                         : 'default'
                   }
-                  variant="light"
                   style={{ fontWeight: 'bold' }}
                 >
                   {selectedStudent.score > 0 ? `+${selectedStudent.score}` : selectedStudent.score}
@@ -695,7 +646,6 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
               </div>
             </div>
 
-            {/* 快捷理由 */}
             {groupedReasons.length > 0 && (
               <div>
                 <div
@@ -731,19 +681,18 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
                       >
                         {category}
                       </div>
-                      <Space breakLine size="small">
+                      <Space wrap size="small">
                         {items.map((r) => (
                           <Button
                             key={r.id}
-                            variant="outline"
                             size="small"
                             onClick={() => handleReasonSelect(r)}
                             style={{
                               borderColor:
                                 r.delta > 0
-                                  ? 'var(--td-success-color-3)'
+                                  ? 'var(--ant-color-success, #52c41a)'
                                   : r.delta < 0
-                                    ? 'var(--td-error-color-3)'
+                                    ? 'var(--ant-color-error, #ff4d4f)'
                                     : undefined
                             }}
                           >
@@ -753,9 +702,9 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
                                 marginLeft: '4px',
                                 color:
                                   r.delta > 0
-                                    ? 'var(--td-success-color)'
+                                    ? 'var(--ant-color-success, #52c41a)'
                                     : r.delta < 0
-                                      ? 'var(--td-error-color)'
+                                      ? 'var(--ant-color-error, #ff4d4f)'
                                       : 'inherit',
                                 fontWeight: 'bold'
                               }}
@@ -771,7 +720,6 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
               </div>
             )}
 
-            {/* 自定义分值 */}
             <div>
               <div
                 style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}
@@ -784,20 +732,15 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
                   <Button
                     key={num}
                     size="small"
-                    variant={customScore === num ? 'base' : 'outline'}
-                    theme={num > 0 ? 'success' : 'danger'}
+                    type={customScore === num ? 'primary' : 'default'}
+                    danger={num < 0}
                     onClick={() => setCustomScore(num)}
                     style={{ minWidth: '42px' }}
                   >
                     {num > 0 ? `+${num}` : num}
                   </Button>
                 ))}
-                <Button
-                  size="small"
-                  variant="outline"
-                  onClick={() => setCustomScore(0)}
-                  style={{ minWidth: '42px' }}
-                >
+                <Button size="small" onClick={() => setCustomScore(0)} style={{ minWidth: '42px' }}>
                   0
                 </Button>
               </div>
@@ -817,7 +760,6 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
               </div>
             </div>
 
-            {/* 理由内容 */}
             <div>
               <div
                 style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}
@@ -827,12 +769,12 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
               </div>
               <Input
                 value={reasonContent}
-                onChange={setReasonContent}
+                onChange={(e) => setReasonContent(e.target.value)}
                 placeholder="输入加分/扣分的原因（可选）"
-                suffixIcon={
+                suffix={
                   reasonContent ? (
-                    <DeleteIcon
-                      onClick={() => setSearchKeyword('')}
+                    <DeleteOutlined
+                      onClick={() => setReasonContent('')}
                       style={{ cursor: 'pointer' }}
                     />
                   ) : undefined
@@ -840,19 +782,18 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
               />
             </div>
 
-            {/* 变动预览 */}
             {customScore !== undefined && (
               <div
                 style={{
                   padding: '16px',
                   backgroundColor:
                     customScore > 0
-                      ? 'var(--td-success-color-1)'
+                      ? 'var(--ant-color-success-bg, #f6ffed)'
                       : customScore < 0
-                        ? 'var(--td-error-color-1)'
+                        ? 'var(--ant-color-error-bg, #fff2f0)'
                         : 'var(--ss-bg-color)',
                   borderRadius: '8px',
-                  border: `1px solid ${customScore > 0 ? 'var(--td-success-color-2)' : customScore < 0 ? 'var(--td-error-color-2)' : 'var(--ss-border-color)'}`,
+                  border: `1px solid ${customScore > 0 ? 'var(--ant-color-success-border, #b7eb8f)' : customScore < 0 ? 'var(--ant-color-error-border, #ffccc7)' : 'var(--ss-border-color)'}`,
                   marginTop: '4px'
                 }}
               >
@@ -873,9 +814,9 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
                       fontWeight: 'bold',
                       color:
                         customScore > 0
-                          ? 'var(--td-success-color)'
+                          ? 'var(--ant-color-success, #52c41a)'
                           : customScore < 0
-                            ? 'var(--td-error-color)'
+                            ? 'var(--ant-color-error, #ff4d4f)'
                             : 'inherit'
                     }}
                   >
@@ -890,7 +831,7 @@ export const Home: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
             )}
           </div>
         )}
-      </Dialog>
+      </Modal>
     </div>
   )
 }

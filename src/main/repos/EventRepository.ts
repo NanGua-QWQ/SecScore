@@ -161,6 +161,10 @@ export class EventRepository extends Service {
     })
   }
 
+  private isPostgres(): boolean {
+    return this.ctx.db.dataSource.options.type === 'postgres'
+  }
+
   async queryByStudent(studentName: string, startTime: string | null, limit: number) {
     const repo = this.ctx.db.dataSource.getRepository(ScoreEventEntity)
     const qb = repo
@@ -170,7 +174,11 @@ export class EventRepository extends Service {
       .orderBy('e.event_time', 'DESC')
       .limit(limit)
     if (startTime) {
-      qb.andWhere('julianday(e.event_time) >= julianday(:startTime)', { startTime })
+      if (this.isPostgres()) {
+        qb.andWhere('e.event_time >= :startTime', { startTime })
+      } else {
+        qb.andWhere('julianday(e.event_time) >= julianday(:startTime)', { startTime })
+      }
     }
     return await qb.getMany()
   }
@@ -193,15 +201,15 @@ export class EventRepository extends Service {
     }
     const startTime = start.toISOString()
 
+    const isPg = this.isPostgres()
+    const joinCondition = isPg
+      ? 'e.student_name = s.name AND e.settlement_id IS NULL AND e.event_time >= :startTime'
+      : 'e.student_name = s.name AND e.settlement_id IS NULL AND julianday(e.event_time) >= julianday(:startTime)'
+
     const qb = this.ctx.db.dataSource
       .getRepository(StudentEntity)
       .createQueryBuilder('s')
-      .leftJoin(
-        ScoreEventEntity,
-        'e',
-        'e.student_name = s.name AND e.settlement_id IS NULL AND julianday(e.event_time) >= julianday(:startTime)',
-        { startTime }
-      )
+      .leftJoin(ScoreEventEntity, 'e', joinCondition, { startTime })
       .select('s.id', 'id')
       .addSelect('s.name', 'name')
       .addSelect('s.score', 'score')

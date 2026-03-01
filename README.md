@@ -13,8 +13,7 @@
   <img alt="Vite" src="https://img.shields.io/badge/Vite-7+-646CFF?style=flat-square&logo=vite">
 </p>
 
-SecScore 是一款教育积分管理软件，基于 Electron  + React + TypeScript 开发，用于管理学生名单、记录加/扣分、查看排行榜与结算历史，并提供权限保护与数据备份。
-
+SecScore 是一款教育积分管理软件，基于 Electron + React + TypeScript 开发，用于管理学生名单、记录加/扣分、查看排行榜与结算历史，并提供权限保护与数据备份。
 
 ## 主要功能
 
@@ -73,9 +72,11 @@ SecScore 是一款教育积分管理软件，基于 Electron  + React + TypeScri
 4. 点击“确认提交”
 
 快捷理由：
+
 - 可在“快捷理由”下拉框中选择预设理由，一键填充理由内容/分值（优先尊重你当前是否已手动输入分值）
 
 撤销最近记录：
+
 - “最近记录”默认折叠，展开后可对记录点击“撤销”
 - 撤销会回滚该条记录对学生积分的影响
 

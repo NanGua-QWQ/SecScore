@@ -1,4 +1,4 @@
-import { Input } from 'tdesign-react'
+import { Input } from 'antd'
 import type { ActionComponentProps } from '../types'
 
 export const eventName = 'add_score'
@@ -18,13 +18,13 @@ const AddScoreAction: React.FC<ActionComponentProps> = ({
         placeholder="请输入分数"
         style={{ width: '150px' }}
         value={value ?? ''}
-        onChange={(v: any) => onChange(v ? String(v) : '')}
+        onChange={(e) => onChange(e.target.value ? String(e.target.value) : '')}
       />
       <Input
         placeholder="请输入理由"
         style={{ width: '150px' }}
         value={reason ?? ''}
-        onChange={(v: any) => onReasonChange?.(v ? String(v) : '')}
+        onChange={(e) => onReasonChange?.(e.target.value ? String(e.target.value) : '')}
       />
     </>
   )

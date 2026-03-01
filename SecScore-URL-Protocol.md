@@ -227,4 +227,3 @@ start "" "secscore://leaderboard"
   ```
 
 此类扩展只需在主进程的 URL 解析函数中增加相应分支逻辑即可。
-

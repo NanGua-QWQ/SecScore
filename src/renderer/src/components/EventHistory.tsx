@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { Table, PrimaryTableCol, Tag } from 'tdesign-react'
+import { Table, Tag } from 'antd'
+import type { ColumnsType } from 'antd/es/table'
 
 interface scoreEvent {
   id: number
@@ -30,26 +31,26 @@ export const EventHistory: React.FC = () => {
     fetchEvents()
   }, [])
 
-  const columns: PrimaryTableCol<scoreEvent>[] = [
-    { colKey: 'student_name', title: '学生姓名', width: 120 },
-    { colKey: 'reason_content', title: '积分理由', width: 200 },
+  const columns: ColumnsType<scoreEvent> = [
+    { title: '学生姓名', dataIndex: 'student_name', key: 'student_name', width: 120 },
+    { title: '积分理由', dataIndex: 'reason_content', key: 'reason_content', width: 200 },
     {
-      colKey: 'delta',
       title: '分值变动',
+      dataIndex: 'delta',
+      key: 'delta',
       width: 100,
-      cell: ({ row }) => (
-        <Tag theme={row.delta > 0 ? 'success' : 'danger'} variant="light">
-          {row.delta > 0 ? `+${row.delta}` : row.delta}
-        </Tag>
+      render: (delta: number) => (
+        <Tag color={delta > 0 ? 'success' : 'error'}>{delta > 0 ? `+${delta}` : delta}</Tag>
       )
     },
-    { colKey: 'val_prev', title: '原分值', width: 100 },
-    { colKey: 'val_curr', title: '新分值', width: 100 },
+    { title: '原分值', dataIndex: 'val_prev', key: 'val_prev', width: 100 },
+    { title: '新分值', dataIndex: 'val_curr', key: 'val_curr', width: 100 },
     {
-      colKey: 'event_time',
       title: '发生时间',
+      dataIndex: 'event_time',
+      key: 'event_time',
       width: 180,
-      cell: ({ row }) => new Date(row.event_time).toLocaleString()
+      render: (time: string) => new Date(time).toLocaleString()
     }
   ]
 
@@ -57,14 +58,12 @@ export const EventHistory: React.FC = () => {
     <div style={{ padding: '24px' }}>
       <h2 style={{ marginBottom: '16px', color: 'var(--ss-text-main)' }}>积分流水</h2>
       <Table
-        data={data}
+        dataSource={data}
         columns={columns}
         rowKey="uuid"
         loading={loading}
         bordered
-        hover
         pagination={{ pageSize: 50, total: data.length, defaultCurrent: 1 }}
-        scroll={{ type: 'virtual', rowHeight: 48, threshold: 100 }}
         style={{ backgroundColor: 'var(--ss-card-bg)', color: 'var(--ss-text-main)' }}
       />
     </div>
